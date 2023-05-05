@@ -1,0 +1,64 @@
+{
+  "apps": {
+    "und": {
+      "chain_id": "FUND-DevNet-2",
+      "genesis": {
+        "version": "1.7.0"
+      },
+      "upgrade": {
+        "branch": "keyleth",
+        "upgrade_height": 50,
+        "upgrade_plan_name": "3-keyleth"
+      },
+      "nodes": {
+        "num_validators": 3,
+        "num_sentries": 3,
+        "num_seeds": 1,
+        "num_rpcs": 1
+      },
+      "staking": {
+        "min_stake": 1000000000000000,
+        "max_stake": 5000000000000000,
+        "small_min_stake": 1000000000000,
+        "small_max_stake": 10000000000000,
+        "acc_start_nund": 5000000000000000
+      },
+      "accounts": {
+        "nund": 240000000000000,
+        "num_ent_signers": 1,
+        "num_ent_accepts": 1,
+        "num_wrhchains": 2,
+        "num_beacons": 2,
+        "num_tests": 10,
+        "storage_purchase": 100
+      }
+    },
+    "ibc": {
+      "version": "5.2.0",
+      "hermes_version": "1.4.1",
+      "chain_id": "IBC-SimApp-DevNet",
+      "accounts": {
+        "num_ibc_accounts": 3
+      }
+    },
+    "cosmovisor": {
+      "version": "1.3.0"
+    }
+  },
+  "docker": {
+    "network": {
+      "subnet": "172.25.1",
+      "ip_start": 2,
+      "p2p_port_start": 26700,
+      "rpc_port_start": 26900,
+      "rest_port_start": 1324,
+      "grpc_port_start": 9190,
+      "ibc_node": {
+        "p2p": 27000,
+        "rpc": 27001,
+        "rest": 27002,
+        "grpc": 27003
+      }
+    }
+  }
+}
