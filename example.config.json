@@ -46,6 +46,7 @@
     }
   },
   "docker": {
+    "container_prefix": "g_dn_",
     "network": {
       "subnet": "172.25.1",
       "ip_start": 2,
