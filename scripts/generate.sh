@@ -84,6 +84,8 @@ IBC_NODE_P2P_PORT=$(get_conf ".docker.network.ibc_node.p2p")
 IBC_NODE_RPC_PORT=$(get_conf ".docker.network.ibc_node.rpc")
 IBC_NODE_REST_PORT=$(get_conf ".docker.network.ibc_node.rest")
 IBC_NODE_GRPC_PORT=$(get_conf ".docker.network.ibc_node.grpc")
+CONTAINER_PREFIX=$(get_conf ".docker.container_prefix")
+DOCKER_NETWORK="${CONTAINER_PREFIX}up_sim_network"
 
 # Binaries required to generate genesis/accounts etc.
 UND_BIN="${BIN_DIR}/und_${UND_GENESIS_VER}"
@@ -582,33 +584,33 @@ function configure_node_assets() {
   cp -r "${NODE_TMP_DIR}" "${NODE_ASSETS_DIR}"/
 
   cat >>"${DOCKER_COMPOSE}" <<EOL
-  g_dn_fund_$NODE_NAME:
-    hostname: g_dn_fund_$NODE_NAME
+  ${CONTAINER_PREFIX}fund_${NODE_NAME}:
+    hostname: ${CONTAINER_PREFIX}fund_${NODE_NAME}
     build:
       context: .
       dockerfile: docker/und.Dockerfile
       args:
-        NODE_NAME: "$NODE_NAME"
-        UPGRADE_PLAN_NAME: "$UPGRADE_PLAN_NAME"
-        UND_GENESIS_VER: "$UND_GENESIS_VER"
-        IBC_VER: "$IBC_VER"
-        UND_UPGRADE_BRANCH: "$UND_UPGRADE_BRANCH"
-        V_PREFIX: "$V_PREFIX"
-        COSMOVISOR_VER: "$COSMOVISOR_VER"
-    container_name: g_dn_fund_$NODE_NAME
+        NODE_NAME: "${NODE_NAME}"
+        UPGRADE_PLAN_NAME: "${UPGRADE_PLAN_NAME}"
+        UND_GENESIS_VER: "${UND_GENESIS_VER}"
+        IBC_VER: "${IBC_VER}"
+        UND_UPGRADE_BRANCH: "${UND_UPGRADE_BRANCH}"
+        V_PREFIX: "${V_PREFIX}"
+        COSMOVISOR_VER: "${COSMOVISOR_VER}"
+    container_name: ${CONTAINER_PREFIX}fund_${NODE_NAME}
     command:  >
       /bin/bash -c "
         cd /root &&
         ./run_node.sh
       "
     networks:
-      mainchain_devnet:
-        ipv4_address: $NODE_IP
+      ${DOCKER_NETWORK}:
+        ipv4_address: ${NODE_IP}
     ports:
-      - "$P2P_PORT:$P2P_PORT"
-      - "$RPC_PORT:$RPC_PORT"
-      - "$REST_PORT:$REST_PORT"
-      - "$GRPC_PORT:$GRPC_PORT"
+      - "${P2P_PORT}:${P2P_PORT}"
+      - "${RPC_PORT}:${RPC_PORT}"
+      - "${REST_PORT}:${REST_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
     volumes:
       - ./out/$NODE_NAME:/root/out:rw
 
@@ -657,10 +659,9 @@ sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"100\
 sed -i "s/\"max_storage_limit\": \"600000\"/\"max_storage_limit\": \"200\"/g" "${GLOBAL_TMP_UND_HOME}/config/genesis.json"
 
 # initialise docker-compose.yml
-cat >>"${DOCKER_COMPOSE}" <<EOL
+cat >"${DOCKER_COMPOSE}" <<EOL
 version: "3"
 services:
-
 EOL
 
 # copy scripts to docker assets
@@ -856,44 +857,44 @@ sed -i "s/__RPC__/${RPC1_IP}:${RPC1_REST_PORT}/g" "${ASSETS_DIR}/nginx.conf"
 
 cat >>"${DOCKER_COMPOSE}" <<EOL
 
-  g_dn_tx_runner:
-    hostname: g_dn_tx_runner
+  ${CONTAINER_PREFIX}tx_runner:
+    hostname: ${CONTAINER_PREFIX}tx_runner
     build:
       context: .
       dockerfile: docker/tx_runner.Dockerfile
       args:
-        UND_GENESIS_VER: "$UND_GENESIS_VER"
-        IBC_VER: "$IBC_VER"
-        UND_UPGRADE_BRANCH: "$UND_UPGRADE_BRANCH"
-        V_PREFIX: "$V_PREFIX"
-    container_name: g_dn_tx_runner
+        UND_GENESIS_VER: "${UND_GENESIS_VER}"
+        IBC_VER: "${IBC_VER}"
+        UND_UPGRADE_BRANCH: "${UND_UPGRADE_BRANCH}"
+        V_PREFIX: "${V_PREFIX}"
+    container_name: ${CONTAINER_PREFIX}tx_runner
     command: >
       /bin/bash -c "
         cd /root &&
-        ./populate_wrapper.sh ${UPGRADE_HEIGHT} "${RPC1_IP}" ${RPC1_PORT} ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_SIMD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
+        ./populate_wrapper.sh "${UPGRADE_HEIGHT}" "${RPC1_IP}" "${RPC1_PORT}" ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_SIMD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
       "
     networks:
-      mainchain_devnet:
+      ${DOCKER_NETWORK}:
         ipv4_address: ${TX_RUNNER_IP}
     volumes:
       - ./out/tx_runner:/root/out:rw
 
-  g_dn_ibc_simd:
-    hostname: g_dn_ibc_simd
+  ${CONTAINER_PREFIX}ibc_simd:
+    hostname: ${CONTAINER_PREFIX}ibc_simd
     build:
       context: .
       dockerfile: docker/ibc_simd.Dockerfile
       args:
-        UND_GENESIS_VER: "$UND_GENESIS_VER"
-        IBC_VER: "$IBC_VER"
-    container_name: g_dn_ibc_simd
+        UND_GENESIS_VER: "${UND_GENESIS_VER}"
+        IBC_VER: "${IBC_VER}"
+    container_name: ${CONTAINER_PREFIX}ibc_simd
     command: >
       /bin/bash -c "
         cd /root &&
         ./run_ibc_simd.sh
       "
     networks:
-      mainchain_devnet:
+      ${DOCKER_NETWORK}:
         ipv4_address: ${IBC_SIMD_IP}
     ports:
       - "${IBC_NODE_P2P_PORT}:${IBC_NODE_P2P_PORT}"
@@ -903,8 +904,8 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
     volumes:
       - ./out/ibc_simd:/root/out:rw
 
-  g_dn_ibc_hermes:
-    hostname: g_dn_ibc_hermes
+  ${CONTAINER_PREFIX}ibc_hermes:
+    hostname: ${CONTAINER_PREFIX}ibc_hermes
     build:
       context: .
       dockerfile: docker/hermes.Dockerfile
@@ -915,14 +916,14 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
         IBC_VER: "${IBC_VER}"
         IBC_CHAIN_ID: "${IBC_CHAIN_ID}"
         HERMES_VER: "${HERMES_VER}"
-    container_name: g_dn_ibc_hermes
+    container_name: ${CONTAINER_PREFIX}ibc_hermes
     command: >
       /bin/bash -c "
         cd /root &&
         ./run_hermes.sh "${CHAIN_ID}" "${IBC_CHAIN_ID}"
       "
     networks:
-      mainchain_devnet:
+      ${DOCKER_NETWORK}:
         ipv4_address: ${HERMES_IP}
     ports:
       - "3000:3000"
@@ -930,19 +931,20 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
     volumes:
       - ./out/hermes:/root/out:rw
 
-  proxy:
-    hostname: proxy
+  ${CONTAINER_PREFIX}proxy:
+    hostname: ${CONTAINER_PREFIX}proxy
+    container_name: ${CONTAINER_PREFIX}proxy
     build:
       context: .
       dockerfile: docker/proxy.Dockerfile
     networks:
-      mainchain_devnet:
+      ${DOCKER_NETWORK}:
         ipv4_address: ${PROXY_IP}
     ports:
       - "1320:1320"
 
 networks:
-  mainchain_devnet:
+  ${DOCKER_NETWORK}:
     ipam:
       driver: default
       config:
