@@ -6,10 +6,10 @@ order to test an upgrade from an `OLD_VERSION` to a `NEW_VERSION` of `und` (for 
 For simplicity, the simulation will use the `OLD_VERSION` for genesis, and currently only supports testing one
 upgrade plan.
 
-The test network comprises of a number of Unification Mainchain validators, sentries, seeds and RPCs, in addition
-to a small third party IBC enabled chain to test IBC transfers.
+The test network consists of a configurable number of Unification Mainchain validators, sentries, seeds and RPCs,
+in addition to a small third party IBC enabled chain to test IBC transfers.
 
-In addition, the network is configured to run:
+The network is also configured to run:
 
 - A number of scripts to randomly generate and broadcast transactions, including `enterprise`, `beacon`, `wrkchain`,
 standard Cosmos Txs and IBC transfers
@@ -68,7 +68,18 @@ the containers without using Docker cache:
 make build-nc
 ```
 
-## 4. Run the network
+## 4. Running
+
+### 4.1. Monitoring
+
+A simple monitoring script can optionally be run while the network is up, which will output some stats. Before bringing
+the composition up, in a separate terminal, run:
+
+```bash
+make mon
+```
+
+### 4.2. Run the network
 
 The network can be brought up by running:
 
@@ -85,9 +96,9 @@ Ctrl+C
 make down
 ```
 
-## 5. Example commands
+## 6. Example commands
 
-The `g_dn_tx_runner` container can be used to run arbitrary queries etc., for example
+The `g_dn_tx_runner` container can also be used to run arbitrary queries etc., for example
 
 Pre-upgrade, using the `und_genesis` binary:
 

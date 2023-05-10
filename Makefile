@@ -1,5 +1,5 @@
 gen:
-	./generate.sh
+	./scripts/generate.sh
 
 build:
 	docker-compose build
@@ -13,9 +13,12 @@ up:
 down:
 	docker-compose down --remove-orphans
 
+mon:
+	@./scripts/monitor.sh
+
 clean:
 	@rm -f ./docker-compose.yml
 	@rm -rf ./out
 	@rm -rf ./generated
 
-.PHONY: build build-nc up down gen clean
+.PHONY: build build-nc up down gen mon clean
