@@ -582,8 +582,8 @@ function configure_node_assets() {
   cp -r "${NODE_TMP_DIR}" "${NODE_ASSETS_DIR}"/
 
   cat >>"${DOCKER_COMPOSE}" <<EOL
-  g_dn_$NODE_NAME:
-    hostname: g_dn_$NODE_NAME
+  g_dn_fund_$NODE_NAME:
+    hostname: g_dn_fund_$NODE_NAME
     build:
       context: .
       dockerfile: docker/und.Dockerfile
@@ -595,7 +595,7 @@ function configure_node_assets() {
         UND_UPGRADE_BRANCH: "$UND_UPGRADE_BRANCH"
         V_PREFIX: "$V_PREFIX"
         COSMOVISOR_VER: "$COSMOVISOR_VER"
-    container_name: g_dn_$NODE_NAME
+    container_name: g_dn_fund_$NODE_NAME
     command:  >
       /bin/bash -c "
         cd /root &&
@@ -759,8 +759,8 @@ rm -rf "${ASSET_KEYS_DIR_UND}"/data
 # validators
 for (( i=1; i<=NUM_VALIDATORS; i++ ))
 do
-  generate_node "val" "node" "${i}"
-  POP_TXS_NODE_ACCS+="\"node${i}\" "
+  generate_node "val" "validator" "${i}"
+  POP_TXS_NODE_ACCS+="\"validator${i}\" "
   POP_TXS_NODE_ACC_SEQUENCESS+="0 "
 done
 
@@ -769,7 +769,7 @@ sed -i "s/__POP_TXS_NODE_ACC_SEQUENCESS__/$POP_TXS_NODE_ACC_SEQUENCESS/g" "${ASS
 
 for (( i=1; i<=NUM_VALIDATORS; i++ ))
 do
-   generate_gentx "node" "${i}"
+   generate_gentx "validator" "${i}"
 done
 
 # sentries
@@ -795,7 +795,7 @@ done
 #################
 for (( i=1; i<=NUM_VALIDATORS; i++ ))
 do
-   collect_genxs "node" "${i}"
+   collect_genxs "validator" "${i}"
 done
 for (( i=1; i<=NUM_SENTRIES; i++ ))
 do
