@@ -27,15 +27,16 @@ TMP_DIR="${BASE_DIR}/tmp"
 TX_DIR="${TMP_DIR}/txs"
 ASSETS_DIR="${BASE_DIR}/generated/assets"
 ASSETS_SCRIPTS_DIR="${ASSETS_DIR}/scripts"
-ASSET_KEYS_DIR_UND="${ASSETS_DIR}/keys/und"
-ASSET_KEYS_DIR_SIMD="${ASSETS_DIR}/keys/simd"
+ASSET_KEYS_DIR_UND="${ASSETS_DIR}/wallet_keys/und"
+ASSET_KEYS_DIR_SIMD="${ASSETS_DIR}/wallet_keys/simd"
 DOCKER_OUT_DIR="${BASE_DIR}/out"
-NODE_ASSETS_DIR="${ASSETS_DIR}/nodes"
+NODE_ASSETS_DIR="${ASSETS_DIR}/fund_net"
 GENERATED_NETWORK="${TMP_DIR}/network.txt"
 DOCKER_COMPOSE="${BASE_DIR}/docker-compose.yml"
 GLOBAL_TMP_HOME="${TMP_DIR}/GLOBAL"
 GLOBAL_TMP_UND_HOME="${TMP_DIR}/GLOBAL/.und_mainchain"
-BIN_DIR="${BASE_DIR}/third_party/bin"
+THIRD_PARTY_DIR="${BASE_DIR}/third_party"
+BIN_DIR="${THIRD_PARTY_DIR}/bin"
 
 ##################
 # load config.json
@@ -125,6 +126,16 @@ function download_genesis_bin() {
   fi
 }
 
+if [ ! -d "${THIRD_PARTY_DIR}" ]; then
+  mkdir -p "${THIRD_PARTY_DIR}"
+  cat >"${THIRD_PARTY_DIR}"/README.md <<EOL
+# Third party binaries
+
+The \`bin\` directory contains automatically downloaded binaries
+required by the \`generate.sh\` script.
+EOL
+fi
+
 # Check binaries required for generating exist
 download_genesis_bin "und" "${UND_BIN}"
 download_genesis_bin "simd" "${IBC_SIMD_BIN}"
@@ -183,8 +194,8 @@ function generate_account_and_add_to_genesis() {
 }
 
 function init_ibc_simd() {
-  local IBC_TMP_DIR="${TMP_DIR}/ibc/node"
-  local IBC_WALLERS_DIR="${TMP_DIR}/ibc/wallets"
+  local IBC_TMP_DIR="${TMP_DIR}/ibc_net/node"
+  local IBC_WALLERS_DIR="${TMP_DIR}/ibc_net/wallets"
   local IBC_WALLET_CONF="${IBC_WALLERS_DIR}/simd_validator.json"
   local IMPORT_RES
   local VALIDATOR_WALLET_ADDRESS
@@ -236,9 +247,9 @@ function generate_ibc_test_account() {
   local UND_WALLET_ADDRESS
   local SIMD_WALLET_ADDRESS
   local IBC_MNEMONIC
-  local IBC_TMP_DIR="${TMP_DIR}/ibc/wallets"
+  local IBC_TMP_DIR="${TMP_DIR}/ibc_net/wallets"
   local IBC_WALLET_CONF="${IBC_TMP_DIR}/${ACC_PREFIX}${ACC_IDX}.json"
-  local IBC_NODE_DIR="${TMP_DIR}/ibc/node"
+  local IBC_NODE_DIR="${TMP_DIR}/ibc_net/node"
 
   mkdir -p "${IBC_TMP_DIR}"
 
@@ -266,7 +277,7 @@ EOL
 }
 
 function config_hermes() {
-  local HERMES_ASSETS="${ASSETS_DIR}/ibc/hermes"
+  local HERMES_ASSETS="${ASSETS_DIR}/ibc_net/hermes"
   local FUND_RPC=${1}
   local FUND_GRPC=${2}
   local SIMD_RPC=${3}
@@ -745,10 +756,10 @@ sed -i "s/__POP_TXS_IBC_ACC_SEQUENCESS_SIMD__/$POP_TXS_IBC_ACC_SEQUENCESS_SIMD/g
 generate_ibc_test_account "1" "hermes" "${ACCOUNT_START_NUND}"
 
 mv "${ASSET_KEYS_DIR_UND}"/keyring-test/* "${ASSET_KEYS_DIR_UND}"
-cp "${TMP_DIR}"/ibc/node/keyring-test/* "${ASSET_KEYS_DIR_SIMD}"
+cp "${TMP_DIR}"/ibc_net/node/keyring-test/* "${ASSET_KEYS_DIR_SIMD}"
 rmdir "${ASSET_KEYS_DIR_UND}"/keyring-test/
 
-cp -r "${TMP_DIR}"/ibc "${ASSETS_DIR}"/ibc/
+cp -r "${TMP_DIR}"/ibc_net "${ASSETS_DIR}"/ibc_net/
 rm -rf "${ASSET_KEYS_DIR_UND}"/config
 rm -rf "${ASSET_KEYS_DIR_UND}"/data
 
@@ -848,7 +859,7 @@ HERMES_FUND_RPC="${RPC1_IP}:${RPC1_PORT}"
 HERMES_FUND_GRPC="${RPC1_IP}:${RPC1_GRPC_PORT}"
 HERMES_SIMD_RPC="${IBC_SIMD_IP}:${IBC_NODE_RPC_PORT}"
 HERMES_SIMD_GRPC="${IBC_SIMD_IP}:${IBC_NODE_GRPC_PORT}"
-HERMES_MNEMONIC=$(cat < "${ASSETS_DIR}/ibc/wallets/hermes1.json" | jq -r ".mnemonic")
+HERMES_MNEMONIC=$(cat < "${ASSETS_DIR}/ibc_net/wallets/hermes1.json" | jq -r ".mnemonic")
 
 config_hermes "${HERMES_FUND_RPC}" "${HERMES_FUND_GRPC}" "${HERMES_SIMD_RPC}" "${HERMES_SIMD_GRPC}"
 

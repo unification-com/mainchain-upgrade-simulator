@@ -21,7 +21,7 @@ RUN mkdir -p /usr/local/bin && \
 
 RUN rm -rf /root/.simapp
 
-COPY generated/assets/ibc/node /root/.simapp
+COPY generated/assets/ibc_net/node /root/.simapp
 COPY generated/assets/scripts/run_ibc_simd.sh ./
 
 RUN chmod +x run_ibc_simd.sh

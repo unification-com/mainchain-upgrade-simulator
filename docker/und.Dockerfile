@@ -49,7 +49,7 @@ COPY --from=und_builder /usr/local/bin/cosmovisor /usr/local/bin/
 
 RUN /root/.und_mainchain/cosmovisor/upgrades/${UPGRADE_PLAN_NAME}/bin/und version
 
-COPY generated/assets/nodes/${NODE_NAME}/.und_mainchain /root/.und_mainchain
+COPY generated/assets/fund_net/${NODE_NAME}/.und_mainchain /root/.und_mainchain
 COPY generated/assets/scripts/run_node.sh ./
 
 RUN chmod +x run_node.sh

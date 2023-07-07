@@ -18,7 +18,7 @@ ARG MNEMONIC
 ARG CHAIN_ID
 ARG IBC_CHAIN_ID
 
-COPY generated/assets/ibc/hermes/config.toml /root/.hermes/config.toml
+COPY generated/assets/ibc_net/hermes/config.toml /root/.hermes/config.toml
 COPY generated/assets/scripts/run_hermes.sh ./
 
 RUN echo "${MNEMONIC}" > /root/.hermes/relayer_mnemonic && \
