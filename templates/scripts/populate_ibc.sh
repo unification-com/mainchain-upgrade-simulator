@@ -20,6 +20,8 @@ SIMD_GAS_PRICES="1.0stake"
 UND_HOME="/root/.und_cli_txs"
 IBC_HOME="/root/.simd_cli_txs"
 
+# in DevNet, this will always be derived from "transfer/channel-0/nund"
+# See https://tutorials.cosmos.network/tutorials/6-ibc-dev/#how-are-ibc-denoms-derived
 IBC_DENOM="ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618"
 
 IBC_ACCS_FUND=(__POP_TXS_IBC_ACCS_FUND__)

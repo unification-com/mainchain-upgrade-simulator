@@ -386,14 +386,14 @@ update_all_acc_sequences
 # submit upgrade proposal
 printf "[%s] [%s] Send Upgrade proposal for height %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${UPGRADE_HEIGHT}"
 submit_upgrade_gov_proposals
-sleep 7s
+sleep 6s
 update_all_acc_sequences
 printf "[%s] [%s] Vote YES for upgrade\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 vote_gov_proposals "yes"
 
 while true
 do
-  sleep 7s
+  sleep 6s
   check_online
   set_current_height
   set_und_bin
@@ -401,23 +401,23 @@ do
 
   # send some FUND
   send_fund
-  sleep 7s
+  sleep 6s
   update_all_acc_sequences
 
   # stakes
   stake_fund
-  sleep 7s
+  sleep 6s
   update_all_acc_sequences
 
   if [ "$PROPOSALS_SUBMITTED" = "0" ]; then
     # submit gov proposals
     submit_gov_proposals
-    sleep 7s
+    sleep 6s
     update_all_acc_sequences
 
     # vote gov proposals
     vote_gov_proposals
-    sleep 7s
+    sleep 6s
     update_all_acc_sequences
   fi
 
@@ -429,24 +429,24 @@ do
   fi
 
   # withdraw rewards
-  if [ "$CURRENT_HEIGHT" -ge "100" ]; then
+  if [ "$CURRENT_HEIGHT" -ge "20" ]; then
     DO_WITHDRAW=$(awk "BEGIN{srand();print int(rand()*(10-1))+1 }")
     printf "[%s] [%s] DO_WITHDRAW=%s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${DO_WITHDRAW}"
     if [ $DO_WITHDRAW -gt 8 ]; then
       withdraw_rewards
-      sleep 7s
+      sleep 6s
       update_all_acc_sequences
     fi
 
     # unstake
     unstake_fund
-    sleep 7s
+    sleep 6s
     update_all_acc_sequences
   fi
 
   # send some FUND
   send_fund
-  sleep 7s
+  sleep 6s
   update_all_acc_sequences
 done
 

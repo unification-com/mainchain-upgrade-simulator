@@ -33,5 +33,5 @@ RUN mkdir -p /usr/local/bin && \
     /usr/local/bin/simd version --home /root/.simapp
 
 COPY generated/assets/scripts ./
-COPY generated/assets/keys/und ./.und_mainchain/keyring-test
-COPY generated/assets/keys/simd ./.simapp/keyring-test
+COPY generated/assets/wallet_keys/und ./.und_mainchain/keyring-test
+COPY generated/assets/wallet_keys/simd ./.simapp/keyring-test
