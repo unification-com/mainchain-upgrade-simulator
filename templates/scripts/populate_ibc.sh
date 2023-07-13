@@ -344,7 +344,8 @@ function send_ibc_fund_to_simd() {
 
     FROM_ACC_SEQ=${IBC_ACC_SEQUENCESS_FUND[$i]}
     RND_AMOUNT=$(head -200 /dev/urandom | cksum | cut -f1 -d " ")
-    AMOUNT="${RND_AMOUNT}nund"
+    RND_AMOUNT_MUL=$(awk "BEGIN {print $RND_AMOUNT*(10000)}")
+    AMOUNT="${RND_AMOUNT_MUL}nund"
 
     printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" "${FROM_ACC}" "${TO_ACC}" $(get_addr ${TO_ACC} "simd")
 
@@ -365,11 +366,16 @@ function send_ibc_fund_from_simd() {
 
       IBC_BALANCE=$(get_denom_balance $(get_addr "${FROM_ACC}" "simd") "${IBC_DENOM}" "simd")
       # 1. print current balance
-      # 2. subtract 10
+      # 2. subtract random amount
       # 3. send modified amount
 
       if [ "$IBC_BALANCE" -gt "10" ]; then
-        SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-10}")
+        RND_AMOUNT=$(head -200 /dev/urandom | cksum | cut -f1 -d " ")
+        if [ "$RND_AMOUNT" -lt "$IBC_BALANCE" ]; then
+          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-$RND_AMOUNT}")
+        else
+          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-10}")
+        fi
         AMOUNT="${SEND_AMOUNT}${IBC_DENOM}"
 
         printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" $(get_addr ${FROM_ACC} "simd") "${TO_ACC}" $(get_addr ${TO_ACC} "und")

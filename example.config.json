@@ -24,21 +24,22 @@
         "acc_start_nund": 5000000000000000
       },
       "accounts": {
-        "nund": 240000000000000,
-        "num_ent_signers": 1,
-        "num_ent_accepts": 1,
-        "num_wrhchains": 2,
-        "num_beacons": 2,
-        "num_tests": 10,
+        "nund": 1000000000000000,
+        "ent_po_amount": 100000000000000,
+        "num_ent_signers": 3,
+        "num_ent_accepts": 2,
+        "num_wrhchains": 5,
+        "num_beacons": 5,
+        "num_tests": 30,
         "storage_purchase": 100
       }
     },
     "ibc": {
-      "version": "5.2.0",
-      "hermes_version": "1.4.1",
+      "version": "5.3.1",
+      "hermes_version": "1.5.1",
       "chain_id": "IBC-SimApp-DevNet",
       "accounts": {
-        "num_ibc_accounts": 3
+        "num_ibc_accounts": 10
       }
     },
     "cosmovisor": {
@@ -46,7 +47,7 @@
     }
   },
   "docker": {
-    "container_prefix": "g_dn_",
+    "container_prefix": "t_dn_",
     "network": {
       "subnet": "172.25.1",
       "ip_start": 2,

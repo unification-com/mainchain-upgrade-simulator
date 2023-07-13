@@ -14,6 +14,12 @@ NUM_SEEDS=$(cat < "${CONFIG}" | jq -r ".apps.und.nodes.num_seeds")
 NUM_RPCS=$(cat < "${CONFIG}" | jq -r ".apps.und.nodes.num_rpcs")
 CONTAINER_PREFIX=$(cat < "${CONFIG}" | jq -r ".docker.container_prefix")
 
+IGNORE_TOT_SUPPLY_HEIGHT=$(awk "BEGIN {print $UPGRADE_HEIGHT-1}")
+
+# in DevNet, this will always be derived from "transfer/channel-0/nund"
+# See https://tutorials.cosmos.network/tutorials/6-ibc-dev/#how-are-ibc-denoms-derived
+IBC_DENOM="ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618"
+
 # Result formatting
 R_DIV="=============================="
 R_DIV="${R_DIV}${R_DIV}${R_DIV}"
@@ -38,6 +44,10 @@ LAST_HEIGHT=0
 LAST_VALID_TXS=0
 LAST_INVALID_TXS=0
 SUCCESSFUL_UPGRADES=0
+TOTAL_SUPPLY=0
+TOTAL_LOCKED_EFUND=0
+TOTAL_SPENT_EFUND=0
+TOTAL_IBC_SUPPLY=0
 
 function check_docker() {
   local RES
@@ -132,10 +142,56 @@ function get_total_txs() {
   fi
 }
 
+function get_total_supply() {
+  local TOT_S
+
+  if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
+    TOT_S=$(curl -s http://localhost:1320/mainchain/enterprise/v1/supply/nund | jq -r '.amount.amount')
+    if [ "$TOT_S" -gt "0" ]; then
+      TOTAL_SUPPLY=$(awk "BEGIN {print $TOT_S/(1000000000)}")
+    fi
+  fi
+}
+
+function get_locked_efund() {
+  local TOTAL_L
+  if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
+    TOTAL_L=$(curl -s http://localhost:1320/mainchain/enterprise/v1/locked | jq -r '.amount.amount')
+    if [ "$TOTAL_L" -gt "0" ]; then
+      TOTAL_LOCKED_EFUND=$(awk "BEGIN {print $TOTAL_L/(1000000000)}")
+    fi
+  fi
+}
+
+function get_spent_efund() {
+  local TOTAL_SP
+  if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
+    TOTAL_SP=$(curl -s http://localhost:1320/mainchain/enterprise/v1/total_spent | jq -r '.amount.amount')
+    if [ "$TOTAL_SP" -gt "0" ]; then
+      TOTAL_SPENT_EFUND=$(awk "BEGIN {print $TOTAL_SP/(1000000000)}")
+    fi
+  fi
+}
+
+function get_ibc_supply() {
+  local TOT_IBC
+  local DENOM
+  local AMNT=0
+  TOT_IBC=$(curl -s http://localhost:27002/cosmos/bank/v1beta1/supply | jq -r '.supply[0]')
+  DENOM=$(echo "${TOT_IBC}" | jq -r ".denom")
+
+  if [ "$DENOM" = "$IBC_DENOM" ]; then
+    AMNT=$(echo "${TOT_IBC}" | jq -r ".amount")
+  fi
+  if [ "$AMNT" -gt "0" ]; then
+    TOTAL_IBC_SUPPLY=$(awk "BEGIN {print $AMNT/(1000000000)}")
+  fi
+}
+
 function print_info() {
-  printf "\nUpgrading       : %s -> %s\n" "${GENESIS_VER}" "${UPGRADE_VER}"
-  printf "Upgrade Plan    : %s, height=%s\n" "${UPGRADE_PLAN}"  "${UPGRADE_HEIGHT}"
-  printf "FUND Nodes      : %s\n" "${TOTAL_NODES}"
+  printf "\nUpgrading    : %s -> %s\n" "${GENESIS_VER}" "${UPGRADE_VER}"
+  printf "Upgrade Plan : %s, height=%s\n" "${UPGRADE_PLAN}"  "${UPGRADE_HEIGHT}"
+  printf "FUND Nodes   : %s (%s Validators)\n" "${TOTAL_NODES}" "${NUM_VALIDATORS}"
 }
 
 function print_results() {
@@ -156,6 +212,12 @@ function print_results() {
   printf "Inalid txs last block : %s\n" "${LAST_INVALID_TXS}"
   printf "Total Valid Txs       : %s\n" "${TOTAL_VALID_TXS}"
   printf "Total Invalid Txs     : %s\n\n" "${TOTAL_INVALID_TXS}"
+
+  printf "Total Locked eFUND    : %'.0f\n" "${TOTAL_LOCKED_EFUND}"
+  printf "Total Spent eFUND     : %'.0f\n" "${TOTAL_SPENT_EFUND}"
+  printf "Total Supply          : %'.0f\n\n" "${TOTAL_SUPPLY}"
+
+  printf "Total on IBC Chain    : %'.3f\n\n" "${TOTAL_IBC_SUPPLY}"
 }
 
 function setup() {
@@ -174,6 +236,10 @@ function monitor() {
   while true; do
     read_node_logs
     get_total_txs
+    get_total_supply
+    get_locked_efund
+    get_spent_efund
+    get_ibc_supply
     clear
     print_results
     sleep 1

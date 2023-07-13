@@ -96,6 +96,20 @@ Ctrl+C
 make down
 ```
 
+### 4.3 Simulate node going offline
+
+Pause a container to simulate a node going offline, for example
+
+```bash
+docker pause t_dn_fund_sentry1
+```
+
+Bring it back online using
+
+```bash
+docker unpause t_dn_fund_sentry1
+```
+
 ## 6. Example commands
 
 The `g_dn_tx_runner` container can also be used to run arbitrary queries etc., for example
