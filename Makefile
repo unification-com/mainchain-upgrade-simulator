@@ -1,3 +1,7 @@
+all: clean gen build up
+
+all-nc: clean gen build-nc up
+
 gen:
 	./scripts/generate.sh
 
@@ -21,4 +25,4 @@ clean:
 	@rm -rf ./out
 	@rm -rf ./generated
 
-.PHONY: build build-nc up down gen mon clean
+.PHONY: all all-nc build build-nc up down gen mon clean
