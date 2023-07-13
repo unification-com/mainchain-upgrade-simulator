@@ -64,6 +64,7 @@ NUM_WRKCHAINS=$(get_conf ".apps.und.accounts.num_wrhchains")
 NUM_BEACONS=$(get_conf ".apps.und.accounts.num_beacons")
 NUM_TEST_ACCS=$(get_conf ".apps.und.accounts.num_tests")
 STORAGE_PURCHASE=$(get_conf ".apps.und.accounts.storage_purchase")
+ENT_PO_AMOUNT=$(get_conf ".apps.und.accounts.ent_po_amount")
 
 # IBC
 IBC_CHAIN_ID=$(get_conf ".apps.ibc.chain_id")
@@ -152,6 +153,8 @@ POP_B_WC_TYPES=""
 POP_B_WC_ACC_SEQUENCESS=""
 POP_B_WC_WC_HEIGHTS_BEACON_TIMESTAMPS=""
 POP_B_WC_HAS_PURCHASED_STORAGE=""
+POP_B_WC_ENT_ACCS=""
+POP_B_WC_ENT_ACC_SEQUENCESS=""
 
 # for populate txs script
 POP_TXS_NODE_ACCS=""
@@ -685,8 +688,11 @@ cp "${BASE_SCRIPTS_DIR}"/* "${ASSETS_SCRIPTS_DIR}"
 ENT_ADDRESSES=""
 for (( i=1; i<=NUM_ENT_SIGNERS; i++ ))
 do
-  ENT_ADDR=$(generate_account_and_add_to_genesis "ent${i}" "${ACCOUNT_START_NUND}")
+  ENT_ACC_NAME="ent${i}"
+  ENT_ADDR=$(generate_account_and_add_to_genesis "${ENT_ACC_NAME}" "${ACCOUNT_START_NUND}")
   ENT_ADDRESSES+="${ENT_ADDR},"
+  POP_B_WC_ENT_ACCS+="\"${ENT_ACC_NAME}\" "
+  POP_B_WC_ENT_ACC_SEQUENCESS+="0 "
 done
 
 ENT_ADDRESSES=$(echo "${ENT_ADDRESSES}" | sed 's/\(.*\),/\1/')
@@ -720,6 +726,9 @@ sed -i "s/__POP_B_WC_TYPES__/$POP_B_WC_TYPES/g" "${ASSETS_SCRIPTS_DIR}"/populate
 sed -i "s/__POP_B_WC_ACC_SEQUENCESS__/$POP_B_WC_ACC_SEQUENCESS/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
 sed -i "s/__POP_B_WC_WC_HEIGHTS_BEACON_TIMESTAMPS__/$POP_B_WC_WC_HEIGHTS_BEACON_TIMESTAMPS/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
 sed -i "s/__POP_B_WC_HAS_PURCHASED_STORAGE__/$POP_B_WC_HAS_PURCHASED_STORAGE/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
+sed -i "s/__POP_B_WC_ENT_ACCS__/$POP_B_WC_ENT_ACCS/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
+sed -i "s/__POP_B_WC_ENT_ACC_SEQUENCESS__/$POP_B_WC_ENT_ACC_SEQUENCESS/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
+sed -i "s/__ENT_PO_AMOUNT__/$ENT_PO_AMOUNT/g" "${ASSETS_SCRIPTS_DIR}"/populate_beacons_wrkchains.sh
 
 for (( i=1; i<=NUM_TEST_ACCS; i++ ))
 do

@@ -28,9 +28,11 @@ GAS_PRICES="25.0nund"
 UPPER_CASE_HASH=0
 UND_HOME="/root/.und_cli_beacons_wrkchains"
 
+ENT_PO_AMOUNT=__ENT_PO_AMOUNT__
+
 # Account names as imported into undcli keys
-ENT_ACC="ent1"
-ENT_ACC_SEQ=0
+ENT_ACCS=( __POP_B_WC_ENT_ACCS__ )
+ENT_ACC_SEQUENCESS=( __POP_B_WC_ENT_ACC_SEQUENCESS__)
 USER_ACCS=( __POP_B_WC_ACCS__)
 TYPES=( __POP_B_WC_TYPES__)
 ACC_SEQUENCESS=( __POP_B_WC_ACC_SEQUENCESS__)
@@ -230,7 +232,10 @@ function update_acc_sequence() {
   fi
 }
 
-check_accounts_exist ${ENT_ACC}
+for i in ${!ENT_ACCS[@]}
+do
+  check_accounts_exist "${ENT_ACCS[$i]}"
+done
 
 for i in ${!USER_ACCS[@]}
 do
@@ -259,13 +264,18 @@ printf "[%s] [%s] Running transactions\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %
 
 START_TIME=$(date +%s)
 
-ENT_ACC_SEQ=$(get_curr_acc_sequence "${ENT_ACC}")
-
 for i in ${!USER_ACCS[@]}
 do
   ACC=${USER_ACCS[$i]}
   CURR_SEQ=$(get_curr_acc_sequence "${ACC}")
   ACC_SEQUENCESS[$i]=${CURR_SEQ}
+done
+
+for i in ${!ENT_ACCS[@]}
+do
+  ACC=${ENT_ACCS[$i]}
+  CURR_SEQ=$(get_curr_acc_sequence "${ACC}")
+  ENT_ACC_SEQUENCESS[$i]=${CURR_SEQ}
 done
 
 for i in ${!USER_ACCS[@]}
@@ -279,9 +289,10 @@ do
     printf "[%s] [%s] %s already whitelisted\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${ACC}"
   else
     printf "[%s] [%s] Whitelist %s for Enterprise POs %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${ACC}" "$(get_addr ${ACC})"
-    RES=$(${UND_BIN} tx enterprise whitelist add $(get_addr ${ACC}) --from ${ENT_ACC} $(get_base_flags) $(get_gas_flags) --sequence ${ENT_ACC_SEQ})
+    RES=$(${UND_BIN} tx enterprise whitelist add $(get_addr ${ACC}) --from ${ENT_ACCS[0]} $(get_base_flags) $(get_gas_flags) --sequence ${ENT_ACC_SEQUENCESS[0]})
     process_tx_log "${RES}"
-    ENT_ACC_SEQ=$(awk "BEGIN {print $ENT_ACC_SEQ+1}")
+    TMP_ENT_ACC_SEQ=${ENT_ACC_SEQUENCESS[0]}
+    ENT_ACC_SEQUENCESS[0]=$(awk "BEGIN {print $TMP_ENT_ACC_SEQ+1}")
     sleep 1s
   fi
 done
@@ -295,7 +306,7 @@ do
   ACC=${USER_ACCS[$i]}
   ACC_SEQ=${ACC_SEQUENCESS[$i]}
   printf "[%s] [%s] %s raise Enterprise POs - %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${ACC}" $(get_addr ${ACC})
-  RES=$(${UND_BIN} tx enterprise purchase 10000000000000000nund --from ${ACC} $(get_base_flags) $(get_gas_flags) --sequence "${ACC_SEQ}")
+  RES=$(${UND_BIN} tx enterprise purchase ${ENT_PO_AMOUNT}nund --from ${ACC} $(get_base_flags) $(get_gas_flags) --sequence "${ACC_SEQ}")
   process_tx_log "${RES}"
   ACC_SEQUENCESS[$i]=$(awk "BEGIN {print $ACC_SEQ+1}")
 done
@@ -313,9 +324,15 @@ for row in $(echo "${RAISED_POS}" | jq -r ".purchase_orders[] | @base64"); do
   PO_STATUS=$(_jq "${row}" '.status')
   printf "[%s] [%s] Process Enterprise PO %s - status=%s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${POID}" "${PO_STATUS}"
   if [ "$PO_STATUS" = "STATUS_RAISED" ]; then
-    RES=$(${UND_BIN} tx enterprise process ${POID} accept --from ${ENT_ACC} $(get_base_flags) $(get_gas_flags) --sequence ${ENT_ACC_SEQ})
-    process_tx_log "${RES}"
-    ENT_ACC_SEQ=$(awk "BEGIN {print $ENT_ACC_SEQ+1}")
+    for i in ${!ENT_ACCS[@]}
+    do
+      E_ACC=${ENT_ACCS[$i]}
+      CURR_E_SEQ=${ENT_ACC_SEQUENCESS[$i]}
+      printf "[%s] [%s] %s Accept Enterprise PO %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${E_ACC}" "${POID}"
+      RES=$(${UND_BIN} tx enterprise process ${POID} accept --from ${E_ACC} $(get_base_flags) $(get_gas_flags) --sequence ${CURR_E_SEQ})
+      process_tx_log "${RES}"
+      ENT_ACC_SEQUENCESS[$i]=$(awk "BEGIN {print $CURR_E_SEQ+1}")
+    done
     sleep 1s
   fi
 done
