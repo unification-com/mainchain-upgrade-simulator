@@ -152,7 +152,7 @@ docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking params -
 ```
 
 TMP - CHECKING MIN COMMISSION - EXECUTE AFTER UPGRADE & PROPOSAL PASSES
-This should occur (suing default config) at around block 75
+This should occur (using the default config in `example.config.json`) at around block 75
 
 ```bash
 docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking params --home /root/.und_cli_txs
