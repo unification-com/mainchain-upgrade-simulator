@@ -50,9 +50,9 @@ touch "${IBC_LOG}"
 
 set -m
 
-/root/populate_beacons_wrkchains.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${BEACON_WRKCHAIN_ALIAS}" "${STORAGE_PURCHASE}" "${CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
-/root/populate_txs.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${TXS_ALIAS}" "${UPGRADE_PLAN_NAME}" "${CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
-/root/populate_ibc.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${IBC_ALIAS}" "${UPGRADE_PLAN_NAME}" "${IBC_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
+/root/scripts/populate_beacons_wrkchains.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${BEACON_WRKCHAIN_ALIAS}" "${STORAGE_PURCHASE}" "${CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
+/root/scripts/populate_txs.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${TXS_ALIAS}" "${UPGRADE_PLAN_NAME}" "${CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
+/root/scripts/populate_ibc.sh "${UPGRADE_HEIGHT}" "${DEVNET_RPC_IP}" "${DEVNET_RPC_PORT}" "${IBC_ALIAS}" "${UPGRADE_PLAN_NAME}" "${IBC_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}" >> "${POPULATE_LOG_FILE}" 2>&1 &
 
 tail -n 3 -f "${POPULATE_LOG_FILE}" | grep --line-buffered '.*' | while read -r LINE0
 do
