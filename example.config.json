@@ -2,16 +2,17 @@
   "apps": {
     "und": {
       "chain_id": "FUND-DevNet-2",
+      "genesis_time": "2023-07-19T10:11:41.253082833Z",
       "genesis": {
         "version": "1.7.0"
       },
       "upgrade": {
-        "branch": "keyleth",
+        "branch": "v1.8.1",
         "upgrade_height": 50,
         "upgrade_plan_name": "3-keyleth"
       },
       "nodes": {
-        "num_validators": 3,
+        "num_validators": 4,
         "num_sentries": 3,
         "num_seeds": 1,
         "num_rpcs": 1
@@ -30,8 +31,42 @@
         "num_ent_accepts": 2,
         "num_wrhchains": 5,
         "num_beacons": 5,
-        "num_tests": 30,
+        "num_tests": 10,
         "storage_purchase": 100
+      },
+      "txs": {
+        "gov": [
+          {
+            "id": 1,
+            "title": "Staking parameters",
+            "description": "set MaxValidators to 96",
+            "passes": "yes",
+            "submit_height": 15,
+            "type": "param_change",
+            "proposal": [
+              {
+                "subspace": "staking",
+                "key": "MaxValidators",
+                "value": 96
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Staking parameters",
+            "description": "test enforced > 0% commission",
+            "passes": "yes",
+            "submit_height": 50,
+            "type": "param_change",
+            "proposal": [
+              {
+                "subspace": "staking",
+                "key": "MinCommissionRate",
+                "value": "0.05"
+              }
+            ]
+          }
+        ]
       }
     },
     "ibc": {
@@ -39,11 +74,11 @@
       "hermes_version": "1.5.1",
       "chain_id": "IBC-SimApp-DevNet",
       "accounts": {
-        "num_ibc_accounts": 10
+        "num_ibc_accounts": 5
       }
     },
     "cosmovisor": {
-      "version": "1.3.0"
+      "version": "1.5.0"
     }
   },
   "docker": {

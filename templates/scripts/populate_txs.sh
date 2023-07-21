@@ -14,6 +14,12 @@ DEVNET_RPC_HTTP="http://${DEVNET_RPC_IP}:${DEVNET_RPC_PORT}"
 BROADCAST_MODE="sync"
 GAS_PRICES="25.0nund"
 UND_HOME="/root/.und_cli_txs"
+PRE_DEFINED_TXS=$(cat /root/txs/pre_defined.json | jq)
+HAS_PREDEFINED_GOV_TXS="null"
+PROCESSED_GOV_TXS=()
+if [ "$PRE_DEFINED_TXS" != "null" ]; then
+  HAS_PREDEFINED_GOV_TXS=$(echo "${PRE_DEFINED_TXS}" | jq -r ".gov")
+fi
 
 NODE_ACCS=( __POP_TXS_NODE_ACCS__)
 USER_ACCS=( __POP_TXS_TEST_ACCS__)
@@ -21,6 +27,7 @@ NODE_ACC_SEQUENCESS=( __POP_TXS_NODE_ACC_SEQUENCESS__)
 USER_ACC_SEQUENCESS=( __POP_TXS_USER_ACC_SEQUENCESS__)
 
 PROPOSALS_SUBMITTED=0
+PRE_DEFINED_PROPOSALS_SUBMITTED=0
 CURRENT_HEIGHT=0
 
 cp -r "/root/.und_mainchain" "${UND_HOME}"
@@ -234,15 +241,22 @@ function unstake_fund() {
 
 function submit_gov_proposals() {
   set_und_bin
+
+  local PROPOSAL_CMD="submit-proposal"
+  if [ "$CURRENT_HEIGHT" -ge "$UPGRADE_HEIGHT" ]; then
+    PROPOSAL_CMD="submit-legacy-proposal"
+  fi
+
   printf "[%s] [%s] GOV SUBMIT TXs\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 
-  FROM_ACC=${USER_ACCS[$RANDOM % ${#USER_ACCS[@]}]}
-  FROM_ACC_SEQ=${USER_ACC_SEQUENCESS[$i]}
+  local RND=$RANDOM % ${#USER_ACCS[@]}
+  FROM_ACC=${USER_ACCS[RND]}
+  FROM_ACC_SEQ=${USER_ACC_SEQUENCESS[$RND]}
   PROPOSAL_TITLE="${FROM_ACC} Proposal"
   PROPOSAL_TEXT="Propose to do this - $(gen_hash)"
   DEPOSIT="10000000000nund"
   printf "[%s] [%s] %s submit proposal %s: %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${FROM_ACC}" "${PROPOSAL_TITLE}" "${PROPOSAL_TEXT}"
-  RES=$(${UND_BIN} tx gov submit-proposal \
+  RES=$(${UND_BIN} tx gov ${PROPOSAL_CMD} \
     --title "${PROPOSAL_TITLE}" \
     --description "${PROPOSAL_TEXT}" \
     --type "Text" \
@@ -259,15 +273,12 @@ function submit_upgrade_gov_proposals() {
   set_und_bin
   printf "[%s] [%s] GOV SUBMIT UPGRADE TX\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 
-  FROM_ACC=${USER_ACCS[$RANDOM % ${#USER_ACCS[@]}]}
-  FROM_ACC_SEQ=${USER_ACC_SEQUENCESS[$i]}
+  FROM_ACC=${USER_ACCS[0]}
+  FROM_ACC_SEQ=${USER_ACC_SEQUENCESS[0]}
   PROPOSAL_TITLE="upgrade ${UPGRADE_PLAN_NAME}"
   PROPOSAL_TEXT="Propose to upgrade to ${UPGRADE_PLAN_NAME}"
   DEPOSIT="10000000000nund"
   printf "[%s] [%s] %s submit proposal %s: %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${FROM_ACC}" "${PROPOSAL_TITLE}" "${PROPOSAL_TEXT}"
-
-#  PROP="${UND_BIN} tx gov submit-proposal software-upgrade \"${UPGRADE_PLAN_NAME}\" --title \"${PROPOSAL_TITLE}\" --description \"${PROPOSAL_TEXT}\" --upgrade-height ${UPGRADE_HEIGHT} --deposit ${DEPOSIT} --from ${FROM_ACC} $(get_base_flags) $(get_gas_flags) --sequence ${FROM_ACC_SEQ}"
-#  printf "[%s] [%s] CMD: %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${PROP}"
 
   RES=$(${UND_BIN} tx gov submit-proposal software-upgrade "${UPGRADE_PLAN_NAME}" \
     --title "${PROPOSAL_TITLE}" \
@@ -311,11 +322,18 @@ function send_vote_tx() {
 function vote_gov_proposals() {
   set_und_bin
   local FORCE=${1}
+  local STATUS_QUERY_TEXT="PROPOSAL_STATUS_VOTING_PERIOD"
+  local PROP_ID_KEY="proposal_id"
+  if [ "$CURRENT_HEIGHT" -ge "$UPGRADE_HEIGHT" ]; then
+    STATUS_QUERY_TEXT="voting_period"
+    PROP_ID_KEY="id"
+  fi
+
   printf "[%s] [%s] GOV VOTE TXs\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
-  local PROPOSALS=$(${UND_BIN} query gov proposals $(get_query_flags) "--status" "PROPOSAL_STATUS_VOTING_PERIOD")
+  local PROPOSALS=$(${UND_BIN} query gov proposals $(get_query_flags) "--status" "${STATUS_QUERY_TEXT}")
   for row in $(echo "${PROPOSALS}" | jq -r ".proposals[] | @base64"); do
     update_all_acc_sequences
-    PROP_ID=$(_jq ${row} ".proposal_id")
+    PROP_ID=$(_jq ${row} ".${PROP_ID_KEY}")
     for i in ${!NODE_ACCS[@]}
     do
       send_vote_tx "${PROP_ID}" "${NODE_ACCS[$i]}" "${FORCE}"
@@ -347,6 +365,91 @@ function withdraw_rewards() {
     done
     update_user_acc_sequences
   done
+}
+
+function pre_defined_gov_tx_was_sent() {
+  local PD_GOV_TX_ID=${1}
+  local WAS_SENT
+  if [[ ${PROCESSED_GOV_TXS[@]} =~ "$PD_GOV_TX_ID" ]]; then
+    WAS_SENT="1"
+  else
+    WAS_SENT="0"
+  fi
+  echo "${WAS_SENT}"
+}
+
+function do_send_pre_defined_gov_tx() {
+  local PD_GOV_TX_ID=${1}
+  local PD_GOV_TX_SUB_HEIGHT=${2}
+  local AT_SUB_HEIGHT="0"
+  local SEND="0"
+  local WAS_SENT
+  WAS_SENT=$(pre_defined_gov_tx_was_sent "${PD_GOV_TX_ID}")
+  if [ "$PD_GOV_TX_SUB_HEIGHT" -le "$CURRENT_HEIGHT" ] && [ "$WAS_SENT" = "0" ]; then
+    SEND="1"
+  fi
+  echo "${SEND}"
+}
+
+function process_pre_defined_gov_txs() {
+  printf "[%s] [%s] process pre-defined gov txs (PRE_DEFINED_PROPOSALS_SUBMITTED = %s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${PRE_DEFINED_PROPOSALS_SUBMITTED}"
+  local PD_GOV_TX_ID
+  local PD_GOV_TX_TITLE
+  local PD_GOV_TX_PROP_TYPE
+  local PD_GOV_TX_SUB_HEIGHT
+  local PD_GOV_TX_JSON_FILE
+  local PD_GOV_SEND
+  local RES
+  local FROM_ACC=${USER_ACCS[0]}
+  local FROM_ACC_SEQ=${USER_ACC_SEQUENCESS[0]}
+  local PROPOSAL_CMD="submit-proposal"
+  if [ "$CURRENT_HEIGHT" -ge "$UPGRADE_HEIGHT" ]; then
+    PROPOSAL_CMD="submit-legacy-proposal"
+  fi
+  for row in $(echo "${PRE_DEFINED_TXS}" | jq -r ".gov[] | @base64"); do
+    if [ "$PRE_DEFINED_PROPOSALS_SUBMITTED" = "0" ]; then
+      PD_GOV_TX_ID=$(_jq "${row}" '.id')
+      PD_GOV_TX_TITLE=$(_jq "${row}" '.title')
+      PD_GOV_TX_PROP_TYPE=$(_jq "${row}" '.type')
+      PD_GOV_TX_SUB_HEIGHT=$(_jq "${row}" '.submit_height')
+      PD_GOV_TX_JSON_FILE="/root/txs/gov.${PD_GOV_TX_ID}.json"
+      PD_GOV_SEND=$(do_send_pre_defined_gov_tx "${PD_GOV_TX_ID}" "${PD_GOV_TX_SUB_HEIGHT}")
+      printf "[%s] [%s] Check pre-defined gov proposal ID %s. Send height = %s, Current height = %s. Send? = %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${PD_GOV_TX_ID}" "${PD_GOV_TX_SUB_HEIGHT}" "${CURRENT_HEIGHT}" "${PD_GOV_SEND}"
+      if [ "$PD_GOV_SEND" = "1" ]; then
+        printf "[%s] [%s] Submit pre-defined gov proposal ID %s - %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${PD_GOV_TX_ID}" "${PD_GOV_TX_TITLE}"
+
+        if [ "$PD_GOV_TX_PROP_TYPE" = "param_change" ]; then
+          RES=$(${UND_BIN} tx gov ${PROPOSAL_CMD} param-change \
+            "${PD_GOV_TX_JSON_FILE}" \
+            --from ${FROM_ACC} \
+            $(get_base_flags) \
+            $(get_gas_flags) \
+            --sequence "${FROM_ACC_SEQ}")
+        fi
+        process_tx_log "${RES}"
+        PRE_DEFINED_PROPOSALS_SUBMITTED=1
+        PROCESSED_GOV_TXS+=("${PD_GOV_TX_ID}")
+      fi
+    fi
+  done
+}
+
+function process_pre_defined_txs() {
+  if [ "$PRE_DEFINED_TXS" != "null" ]; then
+    if [ "$HAS_PREDEFINED_GOV_TXS" != "null" ]; then
+      sleep 7s
+      update_all_acc_sequences
+      process_pre_defined_gov_txs
+      if [ "$PRE_DEFINED_PROPOSALS_SUBMITTED" = "1" ]; then
+        sleep 7s
+        update_all_acc_sequences
+        printf "[%s] [%s] Vote YES for pre-defined gov proposal\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+        sleep 7s
+        vote_gov_proposals "yes"
+        PRE_DEFINED_PROPOSALS_SUBMITTED=0
+      fi
+    fi
+  fi
 }
 
 for i in ${!USER_ACCS[@]}
@@ -399,6 +502,9 @@ do
   set_und_bin
   update_all_acc_sequences
 
+  # prioritise pre-defined txs
+  process_pre_defined_txs
+
   # send some FUND
   send_fund
   sleep 6s
@@ -423,8 +529,9 @@ do
 
   DO_GOV=$(awk "BEGIN{srand();print int(rand()*(5-1))+1 }")
   printf "[%s] [%s] DO_GOV=%s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${DO_GOV}"
-  if [ $DO_GOV -gt 3 ]; then
+  if [ $DO_GOV -gt 3 ] && [ "$PRE_DEFINED_PROPOSALS_SUBMITTED" = "0" ]; then
     printf "[%s] [%s] Set PROPOSALS_SUBMITTED=0\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+    # next loop, submit a proposal
     PROPOSALS_SUBMITTED=0
   fi
 

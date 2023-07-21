@@ -1,4 +1,4 @@
-all: clean gen build up
+all: down clean gen build up
 
 all-nc: clean gen build-nc up
 

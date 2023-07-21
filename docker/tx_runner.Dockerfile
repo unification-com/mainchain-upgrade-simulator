@@ -30,8 +30,10 @@ RUN mkdir -p /usr/local/bin && \
     mv build/simd /usr/local/bin/simd && \
     /usr/local/bin/und_genesis version --home /root/.und_mainchain && \
     /usr/local/bin/und_upgrade version --home /root/.und_mainchain && \
-    /usr/local/bin/simd version --home /root/.simapp
+    /usr/local/bin/simd version --home /root/.simapp && \
+    mkdir /root/txs && mkdir /root/txs/scripts
 
-COPY generated/assets/scripts ./
+COPY generated/assets/scripts ./scripts/
+COPY generated/assets/txs ./txs/
 COPY generated/assets/wallet_keys/und ./.und_mainchain/keyring-test
 COPY generated/assets/wallet_keys/simd ./.simapp/keyring-test

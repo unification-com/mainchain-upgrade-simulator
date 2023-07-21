@@ -29,6 +29,7 @@ ASSETS_DIR="${BASE_DIR}/generated/assets"
 ASSETS_SCRIPTS_DIR="${ASSETS_DIR}/scripts"
 ASSET_KEYS_DIR_UND="${ASSETS_DIR}/wallet_keys/und"
 ASSET_KEYS_DIR_SIMD="${ASSETS_DIR}/wallet_keys/simd"
+ASSETS_TXS_DIR="${ASSETS_DIR}/txs"
 DOCKER_OUT_DIR="${BASE_DIR}/out"
 NODE_ASSETS_DIR="${ASSETS_DIR}/fund_net"
 GENERATED_NETWORK="${TMP_DIR}/network.txt"
@@ -65,6 +66,7 @@ NUM_BEACONS=$(get_conf ".apps.und.accounts.num_beacons")
 NUM_TEST_ACCS=$(get_conf ".apps.und.accounts.num_tests")
 STORAGE_PURCHASE=$(get_conf ".apps.und.accounts.storage_purchase")
 ENT_PO_AMOUNT=$(get_conf ".apps.und.accounts.ent_po_amount")
+GENESIS_TIME=$(get_conf ".apps.und.genesis_time")
 
 # IBC
 IBC_CHAIN_ID=$(get_conf ".apps.ibc.chain_id")
@@ -350,11 +352,46 @@ EOL
     local COMMISSION_MAX_RATE="0.1"
     local COMMISSION_MAX_CHANGE_RATE="0.01"
 
-    # set node1 to 0%
+    # ToDo: Make these configurable
+    # set node1
+    # COMMISSION_RATE = 0%
+    # COMMISSION_MAX_RATE = 1%
+    # COMMISSION_MAX_CHANGE_RATE = 1%
     if [ "$NODE_NUM" = "1" ]; then
       COMMISSION_RATE="0"
+      COMMISSION_MAX_RATE="0.1"
+      COMMISSION_MAX_CHANGE_RATE="0.01"
     fi
 
+    # set node2
+    # COMMISSION_RATE = 3%
+    # COMMISSION_MAX_RATE to 3%
+    # COMMISSION_MAX_CHANGE_RATE = 1%
+    if [ "$NODE_NUM" = "2" ]; then
+      COMMISSION_RATE="0.03"
+      COMMISSION_MAX_RATE="0.04"
+      COMMISSION_MAX_CHANGE_RATE="0.01"
+    fi
+
+    # set node3
+    # COMMISSION_RATE = 3%
+    # COMMISSION_MAX_RATE to 10%
+    # COMMISSION_MAX_CHANGE_RATE = 1%
+    if [ "$NODE_NUM" = "3" ]; then
+      COMMISSION_RATE="0.03"
+      COMMISSION_MAX_RATE="0.1"
+      COMMISSION_MAX_CHANGE_RATE="0.01"
+    fi
+
+    # set node4
+    # COMMISSION_RATE = 3%
+    # COMMISSION_MAX_RATE to 10%
+    # COMMISSION_MAX_CHANGE_RATE = 5%
+    if [ "$NODE_NUM" = "4" ]; then
+      COMMISSION_RATE="0.03"
+      COMMISSION_MAX_RATE="0.1"
+      COMMISSION_MAX_CHANGE_RATE="0.05"
+    fi
 
     IMPORT_RES=$(${UND_BIN} keys add "${NODE_NAME}" --keyring-backend=test --keyring-dir="${NODE_TMP_UND_HOME}" --output=json 2>&1)
 
@@ -656,6 +693,7 @@ mkdir -p "${NODE_ASSETS_DIR}"
 mkdir -p "${ASSET_KEYS_DIR_UND}"
 mkdir -p "${ASSET_KEYS_DIR_SIMD}"
 mkdir -p "${ASSETS_SCRIPTS_DIR}"
+mkdir -p "${ASSETS_TXS_DIR}"
 
 mkdir -p "${GLOBAL_TMP_HOME}"
 
@@ -671,6 +709,10 @@ sed -i "s/\"max_deposit_period\": \"172800s\"/\"max_deposit_period\": \"90s\"/g"
 sed -i "s/\"fee_purchase_storage\": \"5000000000\"/\"fee_purchase_storage\": \"1000000000\"/g" "${GLOBAL_TMP_UND_HOME}/config/genesis.json"
 sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"100\"/g" "${GLOBAL_TMP_UND_HOME}/config/genesis.json"
 sed -i "s/\"max_storage_limit\": \"600000\"/\"max_storage_limit\": \"200\"/g" "${GLOBAL_TMP_UND_HOME}/config/genesis.json"
+
+if [ "$GENESIS_TIME" != "null" ]; then
+  sed -i "s/\"genesis_time\": \".*\"/\"genesis_time\": \"${GENESIS_TIME}\"/g" "${GLOBAL_TMP_UND_HOME}/config/genesis.json"
+fi
 
 # initialise docker-compose.yml
 cat >"${DOCKER_COMPOSE}" <<EOL
@@ -891,7 +933,7 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
     command: >
       /bin/bash -c "
         cd /root &&
-        ./populate_wrapper.sh "${UPGRADE_HEIGHT}" "${RPC1_IP}" "${RPC1_PORT}" ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_SIMD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
+        ./scripts/populate_wrapper.sh "${UPGRADE_HEIGHT}" "${RPC1_IP}" "${RPC1_PORT}" ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_SIMD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
       "
     networks:
       ${DOCKER_NETWORK}:
@@ -970,6 +1012,66 @@ networks:
       config:
         - subnet: $SUBNET.0/24
 EOL
+
+#########################
+# process pre-defined txs
+#########################
+
+PRE_DEFINED_TXS=$(get_conf ".apps.und.txs")
+MIN_GOV_DEPOSIT=$(cat < "${GLOBAL_TMP_UND_HOME}"/config/genesis.json | jq -r ".app_state.gov.deposit_params.min_deposit[0].amount")
+
+function process_gov_txs() {
+  local GOV_TXS
+  local TX_ID
+  local TX_TITLE
+  local TX_DESC
+  local TX_PROP_TYPE
+  local TX_PROP
+  local TX_JSON_FILE
+  local PROP_JSON
+  GOV_TXS=$(get_conf ".apps.und.txs.gov")
+  if [ "$GOV_TXS" != "null" ]; then
+    echo "process pre-defined gov txs"
+    for row in $(echo "${PRE_DEFINED_TXS}" | jq -r ".gov[] | @base64"); do
+      TX_ID=$(_jq "${row}" '.id')
+      TX_TITLE=$(_jq "${row}" '.title')
+      TX_DESC=$(_jq "${row}" '.description')
+      TX_PROP_TYPE=$(_jq "${row}" '.type')
+      TX_PROP=$(_jq "${row}" '.proposal')
+      TX_JSON_FILE="${ASSETS_TXS_DIR}/gov.${TX_ID}.json"
+
+      if [ "$TX_PROP_TYPE" = "param_change" ]; then
+        PROP_JSON=$(cat <<EOF
+{
+  "title": "${TX_TITLE}",
+  "description": "${TX_DESC}",
+  "changes": ${TX_PROP},
+  "deposit": "${MIN_GOV_DEPOSIT}nund"
+}
+EOF
+)
+        echo "${PROP_JSON}" | jq > "${TX_JSON_FILE}"
+      fi
+    done
+  fi
+}
+
+#"deposit": [
+ #    {
+ #      "denom": "nund",
+ #      "amount": "${MIN_GOV_DEPOSIT}"
+ #    }
+ #  ]
+
+
+# Governance
+if [ "$PRE_DEFINED_TXS" != "null" ]; then
+  process_gov_txs
+
+  echo "${PRE_DEFINED_TXS}" | jq > "${ASSETS_TXS_DIR}/pre_defined.json"
+else
+  echo "No pre-defined txs"
+fi
 
 rm -rf "${TMP_DIR}"
 
