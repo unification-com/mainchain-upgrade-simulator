@@ -67,6 +67,7 @@ NUM_TEST_ACCS=$(get_conf ".apps.und.accounts.num_tests")
 STORAGE_PURCHASE=$(get_conf ".apps.und.accounts.storage_purchase")
 ENT_PO_AMOUNT=$(get_conf ".apps.und.accounts.ent_po_amount")
 GENESIS_TIME=$(get_conf ".apps.und.genesis_time")
+VAL_STAKE_OVERRIDES=$(get_conf ".apps.und.staking.stake_overrides")
 
 # IBC
 IBC_CHAIN_ID=$(get_conf ".apps.ibc.chain_id")
@@ -351,46 +352,43 @@ EOL
     local COMMISSION_RATE="0.1"
     local COMMISSION_MAX_RATE="0.1"
     local COMMISSION_MAX_CHANGE_RATE="0.01"
+    local NODE_STAKE="0"
+    local MIN_SELF_DELEGATION="1"
 
-    # ToDo: Make these configurable
-    # set node1
-    # COMMISSION_RATE = 0%
-    # COMMISSION_MAX_RATE = 1%
-    # COMMISSION_MAX_CHANGE_RATE = 1%
-    if [ "$NODE_NUM" = "1" ]; then
-      COMMISSION_RATE="0"
-      COMMISSION_MAX_RATE="0.1"
-      COMMISSION_MAX_CHANGE_RATE="0.01"
-    fi
+    if [ "$VAL_STAKE_OVERRIDES" != "null" ]; then
+      echo "process validator commission overrides"
+      for row in $(echo "${VAL_STAKE_OVERRIDES}" | jq -r ".[] | @base64"); do
+          COMM_VAL_NUM=$(_jq "${row}" '.validator')
+          if [ "$COMM_VAL_NUM" = "$NODE_NUM" ]; then
+            echo "override default commission for validator${NODE_NUM}"
+            OVERRIDE_COMMISSION_RATE=$(_jq "${row}" '.rate')
+            OVERRIDE_COMMISSION_MAX_RATE=$(_jq "${row}" '.max_rate')
+            OVERRIDE_COMMISSION_MAX_CHANGE_RATE=$(_jq "${row}" '.max_change_rate')
+            OVERRIDE_STAKE=$(_jq "${row}" '.stake')
+            OVERRIDE_MIN_SELF_DELEGATION=$(_jq "${row}" '.min_self')
 
-    # set node2
-    # COMMISSION_RATE = 3%
-    # COMMISSION_MAX_RATE to 3%
-    # COMMISSION_MAX_CHANGE_RATE = 1%
-    if [ "$NODE_NUM" = "2" ]; then
-      COMMISSION_RATE="0.03"
-      COMMISSION_MAX_RATE="0.04"
-      COMMISSION_MAX_CHANGE_RATE="0.01"
-    fi
-
-    # set node3
-    # COMMISSION_RATE = 3%
-    # COMMISSION_MAX_RATE to 10%
-    # COMMISSION_MAX_CHANGE_RATE = 1%
-    if [ "$NODE_NUM" = "3" ]; then
-      COMMISSION_RATE="0.03"
-      COMMISSION_MAX_RATE="0.1"
-      COMMISSION_MAX_CHANGE_RATE="0.01"
-    fi
-
-    # set node4
-    # COMMISSION_RATE = 3%
-    # COMMISSION_MAX_RATE to 10%
-    # COMMISSION_MAX_CHANGE_RATE = 5%
-    if [ "$NODE_NUM" = "4" ]; then
-      COMMISSION_RATE="0.03"
-      COMMISSION_MAX_RATE="0.1"
-      COMMISSION_MAX_CHANGE_RATE="0.05"
+            if [ "$OVERRIDE_COMMISSION_RATE" != "null" ]; then
+              echo "OVERRIDE_COMMISSION_RATE=${OVERRIDE_COMMISSION_RATE}"
+              COMMISSION_RATE="${OVERRIDE_COMMISSION_RATE}"
+            fi
+            if [ "$OVERRIDE_COMMISSION_MAX_RATE" != "null" ]; then
+              echo "OVERRIDE_COMMISSION_MAX_RATE=${OVERRIDE_COMMISSION_MAX_RATE}"
+              COMMISSION_MAX_RATE="${OVERRIDE_COMMISSION_MAX_RATE}"
+            fi
+            if [ "$OVERRIDE_COMMISSION_MAX_CHANGE_RATE" != "null" ]; then
+              echo "OVERRIDE_COMMISSION_MAX_CHANGE_RATE=${OVERRIDE_COMMISSION_MAX_CHANGE_RATE}"
+              COMMISSION_MAX_CHANGE_RATE="${OVERRIDE_COMMISSION_MAX_CHANGE_RATE}"
+            fi
+            if [ "$OVERRIDE_STAKE" != "null" ]; then
+              echo "OVERRIDE_STAKE=${OVERRIDE_STAKE}"
+              NODE_STAKE="${OVERRIDE_STAKE}"
+            fi
+            if [ "$OVERRIDE_MIN_SELF_DELEGATION" != "null" ]; then
+              echo "OVERRIDE_MIN_SELF_DELEGATION=${OVERRIDE_MIN_SELF_DELEGATION}"
+              MIN_SELF_DELEGATION="${OVERRIDE_MIN_SELF_DELEGATION}"
+            fi
+          fi
+      done
     fi
 
     IMPORT_RES=$(${UND_BIN} keys add "${NODE_NAME}" --keyring-backend=test --keyring-dir="${NODE_TMP_UND_HOME}" --output=json 2>&1)
@@ -406,13 +404,18 @@ EOL
 
     local IS_SMALL
     IS_SMALL=$(awk "BEGIN {print $NODE_NUM%5}")
-    if [ "$IS_SMALL" = "0" ]; then
-      NODE_STAKE=$(awk "BEGIN{srand();print int(rand()*($SMALL_MAX_STAKE-$SMALL_MIN_STAKE))+$SMALL_MIN_STAKE }")
-      echo "${NODE_NAME} Small Stake = ${NODE_STAKE}"
+    if [ "$NODE_STAKE" = "0" ]; then
+      if [ "$IS_SMALL" = "0" ]; then
+        NODE_STAKE=$(awk "BEGIN{srand();print int(rand()*($SMALL_MAX_STAKE-$SMALL_MIN_STAKE))+$SMALL_MIN_STAKE }")
+        echo "${NODE_NAME} Small Stake = ${NODE_STAKE}"
+      else
+        NODE_STAKE=$(awk "BEGIN{srand();print int(rand()*($MAX_STAKE-$MIN_STAKE))+$MIN_STAKE }")
+        echo "${NODE_NAME} Large Stake = ${NODE_STAKE}"
+      fi
     else
-      NODE_STAKE=$(awk "BEGIN{srand();print int(rand()*($MAX_STAKE-$MIN_STAKE))+$MIN_STAKE }")
-      echo "${NODE_NAME} Large Stake = ${NODE_STAKE}"
+      echo "${NODE_NAME} Override Stake = ${NODE_STAKE}"
     fi
+
 
     cp "${NODE_TMP_UND_HOME}"/keyring-test/* "${ASSET_KEYS_DIR_UND}"/
 
@@ -434,7 +437,7 @@ EOL
   "commission_rate": "${COMMISSION_RATE}",
   "commission_max_rate": "${COMMISSION_MAX_RATE}",
   "commission_max_change_rate": "${COMMISSION_MAX_CHANGE_RATE}",
-  "min_self_delegation": "1",
+  "min_self_delegation": "${MIN_SELF_DELEGATION}",
   "pub_key": "${ESCAPED_TENDERMINT_VAL_INFO}"
 }
 EOL

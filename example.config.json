@@ -22,7 +22,35 @@
         "max_stake": 5000000000000000,
         "small_min_stake": 1000000000000,
         "small_max_stake": 10000000000000,
-        "acc_start_nund": 5000000000000000
+        "acc_start_nund": 5000000000000000,
+        "stake_overrides": [
+          {
+            "validator": 1,
+            "rate": 0,
+            "max_rate": 0.1,
+            "max_change_rate": 0.01,
+            "stake": 2400000000000000,
+            "min_self": 1000
+          },
+          {
+            "validator": 2,
+            "rate": 0.03,
+            "max_rate": 0.4,
+            "max_change_rate": 0.01
+          },
+          {
+            "validator": 3,
+            "rate": 0.03,
+            "max_rate": 0.1,
+            "max_change_rate": 0.01
+          },
+          {
+            "validator": 4,
+            "rate": 0.03,
+            "max_rate": 0.1,
+            "max_change_rate": 0.05
+          }
+        ]
       },
       "accounts": {
         "nund": 1000000000000000,
