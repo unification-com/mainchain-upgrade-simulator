@@ -278,12 +278,14 @@ function submit_upgrade_gov_proposals() {
   PROPOSAL_TITLE="upgrade ${UPGRADE_PLAN_NAME}"
   PROPOSAL_TEXT="Propose to upgrade to ${UPGRADE_PLAN_NAME}"
   DEPOSIT="10000000000nund"
-  printf "[%s] [%s] %s submit proposal %s: %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${FROM_ACC}" "${PROPOSAL_TITLE}" "${PROPOSAL_TEXT}"
+  printf "[%s] [%s] %s submit upgrade proposal %s: %s (%s at height %s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${FROM_ACC}" "${PROPOSAL_TITLE}" "${PROPOSAL_TEXT}" "${UPGRADE_PLAN_NAME}" "${UPGRADE_HEIGHT}"
 
-  RES=$(${UND_BIN} tx gov submit-proposal software-upgrade "${UPGRADE_PLAN_NAME}" \
+  RES=$(${UND_BIN} tx gov submit-legacy-proposal software-upgrade "${UPGRADE_PLAN_NAME}" \
     --title "${PROPOSAL_TITLE}" \
     --description "${PROPOSAL_TEXT}" \
     --upgrade-height "${UPGRADE_HEIGHT}" \
+    --upgrade-info "https://github.com/unification-com/mainchain/tree/percival" \
+    --no-validate \
     --deposit "${DEPOSIT}" \
     --from ${FROM_ACC} \
     $(get_base_flags) \
@@ -323,11 +325,11 @@ function vote_gov_proposals() {
   set_und_bin
   local FORCE=${1}
   local STATUS_QUERY_TEXT="PROPOSAL_STATUS_VOTING_PERIOD"
-  local PROP_ID_KEY="proposal_id"
-  if [ "$CURRENT_HEIGHT" -ge "$UPGRADE_HEIGHT" ]; then
-    STATUS_QUERY_TEXT="voting_period"
-    PROP_ID_KEY="id"
-  fi
+  local PROP_ID_KEY="id"
+  #if [ "$CURRENT_HEIGHT" -ge "$UPGRADE_HEIGHT" ]; then
+  #  STATUS_QUERY_TEXT="voting_period"
+  #  PROP_ID_KEY="id"
+  #fi
 
   printf "[%s] [%s] GOV VOTE TXs\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
   local PROPOSALS=$(${UND_BIN} query gov proposals $(get_query_flags) "--status" "${STATUS_QUERY_TEXT}")

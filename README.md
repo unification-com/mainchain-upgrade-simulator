@@ -23,6 +23,7 @@ This suite has been used internally to test upgrading the following:
 - 1.5.1 -> 1.6.3
 - 1.6.3 -> 1.7.0
 - 1.7.0 -> 1.8.1
+- 1.8.2 -> 1.9.0
 
 ## 1. Configuring a simulation DevNet
 

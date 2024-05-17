@@ -1,5 +1,5 @@
 [global]
-log_level = 'info'
+log_level = 'debug'
 [mode]
 [mode.clients]
 enabled = true
@@ -26,14 +26,14 @@ port = 3001
 id = '__FUND_CHAIN_ID__'
 rpc_addr = 'http://__FUND_RPC__'
 grpc_addr = 'http://__FUND_GRPC__'
-websocket_addr = 'ws://__FUND_RPC__/websocket'
+event_source = { mode = 'push', url = 'ws://__FUND_RPC__/websocket', batch_delay = '200ms' }
 rpc_timeout = '10s'
 account_prefix = 'und'
 key_name = 'fund_relayer'
 address_type = { derivation = 'cosmos' }
 store_prefix = 'ibc'
 default_gas = 100000
-max_gas = 700000
+max_gas = 7000000
 gas_price = { price = 25.0, denom = 'nund' }
 gas_multiplier = 1.2
 max_msg_num = 30
@@ -53,13 +53,13 @@ list = [
 id = '__IBC_CHAIN_ID__'
 rpc_addr = 'http://__IBC_SIMD_RPC__'
 grpc_addr = 'http://__IBC_SIMD_GRPC__'
-websocket_addr = 'ws://__IBC_SIMD_RPC__/websocket'
+event_source = { mode = 'push', url = 'ws://__IBC_SIMD_RPC__/websocket', batch_delay = '200ms' }
 rpc_timeout = '10s'
 account_prefix = 'cosmos'
 key_name = 'simapp_relayer'
 store_prefix = 'ibc'
 default_gas = 100000
-max_gas = 700000
+max_gas = 7000000
 gas_price = { price = 1, denom = 'stake' }
 gas_multiplier = 1.2
 max_msg_num = 30

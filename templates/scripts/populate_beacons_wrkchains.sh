@@ -232,6 +232,14 @@ function update_acc_sequence() {
   fi
 }
 
+function update_all_user_acc_sequences() {
+  printf "[%s] [%s] update all user acc sequences\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+  for i in ${!USER_ACCS[@]}
+  do
+    ACC_SEQUENCESS[$i]=$(get_curr_acc_sequence "${USER_ACCS[$i]}")
+  done
+}
+
 for i in ${!ENT_ACCS[@]}
 do
   check_accounts_exist "${ENT_ACCS[$i]}"
@@ -418,6 +426,8 @@ do
       POST_UP_PARAMS="1"
     fi
   fi
+
+  update_all_user_acc_sequences
 
   LAST_HEIGHT=$(awk "BEGIN {print $CURRENT_HEIGHT-1}")
   for i in ${!USER_ACCS[@]}

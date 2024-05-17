@@ -68,7 +68,7 @@ function get_containers() {
   D=$(check_docker)
 
   if [ "$D" = "1" ]; then
-    for row in $(docker compose ps --format json | jq -r '.[] | @base64'); do
+    for row in $(docker compose ps --format json | jq -sc '.[] | if type=="array" then .[] else . end' | jq -s | jq -r '.[] | @base64'); do
       _jq() {
         echo ${row} | base64 --decode | jq -r ${1}
       }
@@ -217,7 +217,7 @@ function print_results() {
   printf "Total Spent eFUND     : %'.0f\n" "${TOTAL_SPENT_EFUND}"
   printf "Total Supply          : %'.0f\n\n" "${TOTAL_SUPPLY}"
 
-  printf "Total on IBC Chain    : %'.3f\n\n" "${TOTAL_IBC_SUPPLY}"
+  printf "Total on IBC Chain    : %'.3f\n" "${TOTAL_IBC_SUPPLY}"
 }
 
 function setup() {

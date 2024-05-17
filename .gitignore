@@ -7,7 +7,7 @@
 
 tmp
 out
-third_party
+third_party/bin
 config.json
 generated
 docker-compose.yml

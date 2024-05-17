@@ -230,6 +230,9 @@ function init_ibc_simd() {
   sed -i "s/address = \"tcp:\/\/0.0.0.0:1317\"/address = \"tcp:\/\/0.0.0.0:${IBC_NODE_REST_PORT}\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
   sed -i "s/address = \"0.0.0.0:9090\"/address = \"0.0.0.0:${IBC_NODE_GRPC_PORT}\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
   sed -i "s/address = \"0.0.0.0:9091\"/address = \"0.0.0.0:9999\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
+  sed -i "s/address = \"tcp:\/\/localhost:1317\"/address = \"tcp:\/\/0.0.0.0:${IBC_NODE_REST_PORT}\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
+  sed -i "s/address = \"localhost:9090\"/address = \"0.0.0.0:${IBC_NODE_GRPC_PORT}\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
+  sed -i "s/address = \"localhost:9091\"/address = \"0.0.0.0:9999\"/g" "${IBC_TMP_DIR}/config/app.toml" && \
   sed -i "s/laddr = \"tcp:\/\/127.0.0.1:26657\"/laddr = \"tcp:\/\/0.0.0.0:${IBC_NODE_RPC_PORT}\"/g" "${IBC_TMP_DIR}/config/config.toml" && \
   sed -i "s/laddr = \"tcp:\/\/0.0.0.0:26656\"/laddr = \"tcp:\/\/0.0.0.0:${IBC_NODE_P2P_PORT}\"/g" "${IBC_TMP_DIR}/config/config.toml" && \
   sed -i "s/cors_allowed_origins = \[\]/ cors_allowed_origins = \[\"*\"\]/g" "${IBC_TMP_DIR}/config/config.toml" && \
@@ -465,6 +468,7 @@ EOL
     sed -i "s/enable = false/enable = true/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/swagger = false/swagger = true/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/address = \"tcp:\/\/0.0.0.0:1317\"/address = \"tcp:\/\/0.0.0.0:$REST_PORT\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+    sed -i "s/denom-to-suggest = \"uatom\"/denom-to-suggest = \"nund\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
   fi
 
   echo "${NODE_NAME}" >> "${GENERATED_NETWORK}"
@@ -782,6 +786,18 @@ do
   POP_TXS_TEST_ACCS+="\"${TEST_ACC_NAME}\" "
   POP_TXS_USER_ACC_SEQUENCESS+="0 "
 done
+
+# Statically defined accounts
+ACC_OBJ=$(get_conf ".apps.und.accounts")
+STATIC_ACCOUNTS=$(get_conf ".apps.und.accounts.static")
+if [ "$STATIC_ACCOUNTS" != "null" ]; then
+  echo "process pre-defined static wallets"
+  for row in $(echo "${ACC_OBJ}" | jq -r ".static[] | @base64"); do
+    WA=$(_jq "${row}" '.address')
+    NUND=$(_jq "${row}" '.nund')
+    add_account_to_genesis "${WA}" "${NUND}"
+  done
+fi
 
 sed -i "s/__POP_TXS_TEST_ACCS__/$POP_TXS_TEST_ACCS/g" "${ASSETS_SCRIPTS_DIR}"/populate_txs.sh
 sed -i "s/__POP_TXS_USER_ACC_SEQUENCESS__/$POP_TXS_USER_ACC_SEQUENCESS/g" "${ASSETS_SCRIPTS_DIR}"/populate_txs.sh

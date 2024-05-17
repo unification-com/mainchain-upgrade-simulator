@@ -60,7 +60,13 @@
         "num_wrhchains": 5,
         "num_beacons": 5,
         "num_tests": 10,
-        "storage_purchase": 100
+        "storage_purchase": 100,
+        "static": [
+          {
+            "address": "und1234...",
+            "nund": 10000000000
+          }
+        ]
       },
       "txs": {
         "gov": [
