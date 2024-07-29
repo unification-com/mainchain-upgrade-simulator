@@ -23,17 +23,16 @@ RUN mkdir -p /usr/local/bin && \
     git checkout ${UND_UPGRADE_BRANCH} && \
     make build && \
     mv /root/mainchain/build/und /usr/local/bin/und_upgrade && \
-    git clone https://github.com/cosmos/ibc-go && \
-    cd ibc-go && \
-    git checkout v${IBC_VER} && \
-    make build && \
-    mv build/simd /usr/local/bin/simd && \
+    wget https://github.com/cosmos/gaia/releases/download/v${IBC_VER}/gaiad-v${IBC_VER}-linux-amd64 && \
+    mv gaiad-v${IBC_VER}-linux-amd64 /usr/local/bin/gaiad && \
+    chmod +x /usr/local/bin/gaiad && \
     /usr/local/bin/und_genesis version --home /root/.und_mainchain && \
     /usr/local/bin/und_upgrade version --home /root/.und_mainchain && \
-    /usr/local/bin/simd version --home /root/.simapp && \
+    /usr/local/bin/gaiad version --home /root/.simapp && \
+    go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest && \
     mkdir /root/txs && mkdir /root/txs/scripts
 
 COPY generated/assets/scripts ./scripts/
 COPY generated/assets/txs ./txs/
 COPY generated/assets/wallet_keys/und ./.und_mainchain/keyring-test
-COPY generated/assets/wallet_keys/simd ./.simapp/keyring-test
+COPY generated/assets/wallet_keys/gaiad ./.simapp/keyring-test

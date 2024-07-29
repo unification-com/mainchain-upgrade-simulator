@@ -28,7 +28,7 @@ TX_DIR="${TMP_DIR}/txs"
 ASSETS_DIR="${BASE_DIR}/generated/assets"
 ASSETS_SCRIPTS_DIR="${ASSETS_DIR}/scripts"
 ASSET_KEYS_DIR_UND="${ASSETS_DIR}/wallet_keys/und"
-ASSET_KEYS_DIR_SIMD="${ASSETS_DIR}/wallet_keys/simd"
+ASSET_KEYS_DIR_GAIAD="${ASSETS_DIR}/wallet_keys/gaiad"
 ASSETS_TXS_DIR="${ASSETS_DIR}/txs"
 DOCKER_OUT_DIR="${BASE_DIR}/out"
 NODE_ASSETS_DIR="${ASSETS_DIR}/fund_net"
@@ -64,6 +64,8 @@ NUM_ENT_ACCEPTS=$(get_conf ".apps.und.accounts.num_ent_accepts")
 NUM_WRKCHAINS=$(get_conf ".apps.und.accounts.num_wrhchains")
 NUM_BEACONS=$(get_conf ".apps.und.accounts.num_beacons")
 NUM_TEST_ACCS=$(get_conf ".apps.und.accounts.num_tests")
+NUM_PAYMENT_STREAM_SENDERS=$(get_conf ".apps.und.accounts.payment_streams.senders")
+NUM_PAYMENT_STREAM_RECEIVERS=$(get_conf ".apps.und.accounts.payment_streams.receivers")
 STORAGE_PURCHASE=$(get_conf ".apps.und.accounts.storage_purchase")
 ENT_PO_AMOUNT=$(get_conf ".apps.und.accounts.ent_po_amount")
 GENESIS_TIME=$(get_conf ".apps.und.genesis_time")
@@ -94,7 +96,7 @@ DOCKER_NETWORK="${CONTAINER_PREFIX}up_sim_network"
 
 # Binaries required to generate genesis/accounts etc.
 UND_BIN="${BIN_DIR}/und_${UND_GENESIS_VER}"
-IBC_SIMD_BIN="${BIN_DIR}/ibc-go_simd_${IBC_VER}"
+GAIAD_BIN="${BIN_DIR}/gaiad_${IBC_VER}"
 V_PREFIX="v"
 
 # und releases prior to v1.6.1 were not tagged with the "v" prefix
@@ -115,8 +117,9 @@ function download_genesis_bin() {
     DL_LOC="https://github.com/unification-com/mainchain/releases/download/${V_PREFIX}${UND_GENESIS_VER}/und_v${UND_GENESIS_VER}_linux_x86_64.tar.gz"
     TAR="und_v${UND_GENESIS_VER}_linux_x86_64.tar.gz"
   else
-    DL_LOC="https://github.com/cosmos/ibc-go/releases/download/v${IBC_VER}/ibc-go_simd_v${IBC_VER}_linux_amd64.tar.gz"
-    TAR="ibc-go_simd_v${IBC_VER}_linux_amd64.tar.gz"
+    BIN_T="gaiad-v${IBC_VER}-linux-amd64"
+    DL_LOC="https://github.com/cosmos/gaia/releases/download/v${IBC_VER}/${BIN_T}"
+    TAR=""
   fi
 
   if ! test -f "$BIN"; then
@@ -124,8 +127,11 @@ function download_genesis_bin() {
     mkdir -p "${BIN_DIR}"/tmp
     cd "${BIN_DIR}"/tmp || exit
     wget "${DL_LOC}"
-    tar -zxvf "${TAR}"
+    if [ -n "$TAR" ]; then
+      tar -zxvf "${TAR}"
+    fi
     mv "${BIN_T}" "${BIN}"
+    chmod +x "${BIN}"
     rm -rf "${BIN_DIR}"/tmp
   fi
 }
@@ -142,7 +148,7 @@ fi
 
 # Check binaries required for generating exist
 download_genesis_bin "und" "${UND_BIN}"
-download_genesis_bin "simd" "${IBC_SIMD_BIN}"
+download_genesis_bin "gaiad" "${GAIAD_BIN}"
 
 cd "${BASE_DIR}" || exit
 
@@ -163,11 +169,11 @@ POP_B_WC_ENT_ACC_SEQUENCESS=""
 POP_TXS_NODE_ACCS=""
 POP_TXS_TEST_ACCS=""
 POP_TXS_IBC_ACCS_FUND=""
-POP_TXS_IBC_ACCS_SIMD=""
+POP_TXS_IBC_ACCS_GAIAD=""
 POP_TXS_NODE_ACC_SEQUENCESS=""
 POP_TXS_USER_ACC_SEQUENCESS=""
 POP_TXS_IBC_ACC_SEQUENCESS_FUND=""
-POP_TXS_IBC_ACC_SEQUENCESS_SIMD=""
+POP_TXS_IBC_ACC_SEQUENCESS_GAIAD=""
 
 ################
 # Main Functions
@@ -199,29 +205,29 @@ function generate_account_and_add_to_genesis() {
   echo "${WALLET_ADDRESS}"
 }
 
-function init_ibc_simd() {
+function init_ibc_gaiad() {
   local IBC_TMP_DIR="${TMP_DIR}/ibc_net/node"
   local IBC_WALLERS_DIR="${TMP_DIR}/ibc_net/wallets"
-  local IBC_WALLET_CONF="${IBC_WALLERS_DIR}/simd_validator.json"
+  local IBC_WALLET_CONF="${IBC_WALLERS_DIR}/gaiad_validator.json"
   local IMPORT_RES
   local VALIDATOR_WALLET_ADDRESS
   local VALIDATOR_MNEMONIC
-  local SIMD_ACC_NAME="simd_validator"
+  local GAIAD_ACC_NAME="gaiad_validator"
 
   mkdir -p "${IBC_WALLERS_DIR}"
 
-  ${IBC_SIMD_BIN} init devnet-validator --chain-id="${IBC_CHAIN_ID}" --home "${IBC_TMP_DIR}"
-  ${IBC_SIMD_BIN} config chain-id "${IBC_CHAIN_ID}" --home "${IBC_TMP_DIR}"
-  ${IBC_SIMD_BIN} config keyring-backend test --home "${IBC_TMP_DIR}"
-  ${IBC_SIMD_BIN} config node "tcp://localhost:${IBC_NODE_RPC_PORT}" --home "${IBC_TMP_DIR}"
+  ${GAIAD_BIN} init devnet-validator --chain-id="${IBC_CHAIN_ID}" --home "${IBC_TMP_DIR}"
+  ${GAIAD_BIN} config chain-id "${IBC_CHAIN_ID}" --home "${IBC_TMP_DIR}"
+  ${GAIAD_BIN} config keyring-backend test --home "${IBC_TMP_DIR}"
+  ${GAIAD_BIN} config node "tcp://localhost:${IBC_NODE_RPC_PORT}" --home "${IBC_TMP_DIR}"
 
-  IMPORT_RES=$(${IBC_SIMD_BIN} keys add "${SIMD_ACC_NAME}" --keyring-backend=test --home="${IBC_TMP_DIR}" --output=json 2>&1)
+  IMPORT_RES=$(${GAIAD_BIN} keys add "${GAIAD_ACC_NAME}" --keyring-backend=test --home="${IBC_TMP_DIR}" --output=json 2>&1)
   VALIDATOR_WALLET_ADDRESS=$(echo "${IMPORT_RES}" | jq -r ".address")
   VALIDATOR_MNEMONIC=$(echo "${IMPORT_RES}" | jq -r ".mnemonic")
 
-  ${IBC_SIMD_BIN} add-genesis-account ${SIMD_ACC_NAME} 100000000000000stake --home "${IBC_TMP_DIR}" --keyring-backend test
-  ${IBC_SIMD_BIN} gentx ${SIMD_ACC_NAME} 1000000stake --home "${IBC_TMP_DIR}" --chain-id="${IBC_CHAIN_ID}"
-  ${IBC_SIMD_BIN} collect-gentxs --home "${IBC_TMP_DIR}"
+  ${GAIAD_BIN} add-genesis-account ${GAIAD_ACC_NAME} 100000000000000stake --home "${IBC_TMP_DIR}" --keyring-backend test
+  ${GAIAD_BIN} gentx ${GAIAD_ACC_NAME} 1000000stake --home "${IBC_TMP_DIR}" --chain-id="${IBC_CHAIN_ID}"
+  ${GAIAD_BIN} collect-gentxs --home "${IBC_TMP_DIR}"
 
   sed -i "s/enable = false/enable = true/g" "${IBC_TMP_DIR}/config/app.toml" && \
   sed -i "s/swagger = false/swagger = true/g" "${IBC_TMP_DIR}/config/app.toml" && \
@@ -240,7 +246,7 @@ function init_ibc_simd() {
   cat >"${IBC_WALLET_CONF}" <<EOL
 {
   "mnemonic": "${VALIDATOR_MNEMONIC}",
-  "simd_address": "${VALIDATOR_WALLET_ADDRESS}",
+  "gaiad_address": "${VALIDATOR_WALLET_ADDRESS}",
   "amount": "100000000000000"
 }
 EOL
@@ -251,10 +257,10 @@ function generate_ibc_test_account() {
   local ACC_PREFIX=${2}
   local AMNT=${3}
   local UND_ACC_NAME="${ACC_PREFIX}_und${ACC_IDX}"
-  local SIMD_ACC_NAME="${ACC_PREFIX}_simd${ACC_IDX}"
+  local GAIAD_ACC_NAME="${ACC_PREFIX}_gaiad${ACC_IDX}"
   local IMPORT_RES
   local UND_WALLET_ADDRESS
-  local SIMD_WALLET_ADDRESS
+  local GAIAD_WALLET_ADDRESS
   local IBC_MNEMONIC
   local IBC_TMP_DIR="${TMP_DIR}/ibc_net/wallets"
   local IBC_WALLET_CONF="${IBC_TMP_DIR}/${ACC_PREFIX}${ACC_IDX}.json"
@@ -268,17 +274,17 @@ function generate_ibc_test_account() {
   UND_WALLET_ADDRESS=$(echo "${IMPORT_RES}" | jq -r ".address")
   add_account_to_genesis "${UND_WALLET_ADDRESS}" "${AMNT}"
 
-  # simd
-  IMPORT_RES=$(yes "${IBC_MNEMONIC}" | ${IBC_SIMD_BIN} keys add "${SIMD_ACC_NAME}" --recover  --keyring-backend=test --home="${IBC_NODE_DIR}" --output=json 2>&1)
-  SIMD_WALLET_ADDRESS=$(echo "${IMPORT_RES}" | jq -r ".address")
+  # gaiad
+  IMPORT_RES=$(yes "${IBC_MNEMONIC}" | ${GAIAD_BIN} keys add "${GAIAD_ACC_NAME}" --recover  --keyring-backend=test --home="${IBC_NODE_DIR}" --output=json 2>&1)
+  GAIAD_WALLET_ADDRESS=$(echo "${IMPORT_RES}" | jq -r ".address")
 
-  ${IBC_SIMD_BIN} add-genesis-account "${SIMD_ACC_NAME}" 100000000000000stake --home "${IBC_NODE_DIR}" --keyring-backend test
+  ${GAIAD_BIN} add-genesis-account "${GAIAD_ACC_NAME}" 100000000000000stake --home "${IBC_NODE_DIR}" --keyring-backend test
 
   cat >"${IBC_WALLET_CONF}" <<EOL
 {
   "mnemonic": "${IBC_MNEMONIC}",
   "und_address": "${UND_WALLET_ADDRESS}",
-  "simd_address": "${SIMD_WALLET_ADDRESS}",
+  "gaiad_address": "${GAIAD_WALLET_ADDRESS}",
   "amount": "${AMNT}"
 }
 EOL
@@ -289,8 +295,8 @@ function config_hermes() {
   local HERMES_ASSETS="${ASSETS_DIR}/ibc_net/hermes"
   local FUND_RPC=${1}
   local FUND_GRPC=${2}
-  local SIMD_RPC=${3}
-  local SIMD_GRPC=${4}
+  local GAIAD_RPC=${3}
+  local GAIAD_GRPC=${4}
 
   mkdir -p "${HERMES_ASSETS}"
 
@@ -298,8 +304,8 @@ function config_hermes() {
 
   sed -i "s/__FUND_RPC__/${FUND_RPC}/g" "${HERMES_ASSETS}"/config.toml
   sed -i "s/__FUND_GRPC__/${FUND_GRPC}/g" "${HERMES_ASSETS}"/config.toml
-  sed -i "s/__IBC_SIMD_RPC__/${SIMD_RPC}/g" "${HERMES_ASSETS}"/config.toml
-  sed -i "s/__IBC_SIMD_GRPC__/${SIMD_GRPC}/g" "${HERMES_ASSETS}"/config.toml
+  sed -i "s/__IBC_GAIAD_RPC__/${GAIAD_RPC}/g" "${HERMES_ASSETS}"/config.toml
+  sed -i "s/__IBC_GAIAD_GRPC__/${GAIAD_GRPC}/g" "${HERMES_ASSETS}"/config.toml
   sed -i "s/__FUND_CHAIN_ID__/${CHAIN_ID}/g" "${HERMES_ASSETS}"/config.toml
   sed -i "s/__IBC_CHAIN_ID__/${IBC_CHAIN_ID}/g" "${HERMES_ASSETS}"/config.toml
 }
@@ -449,8 +455,11 @@ EOL
   sed -i "s/minimum-gas-prices = \"\"/minimum-gas-prices = \"25.0nund\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
   sed -i "s/addr_book_strict = true/addr_book_strict = false/g" "${NODE_TMP_UND_HOME}/config/config.toml"
 
-  sed -i "s/snapshot-interval = 0/snapshot-interval = 100/g" "${NODE_TMP_UND_HOME}/config/app.toml"
-  sed -i "s/snapshot-keep-recent = 2/snapshot-keep-recent = 5/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+  sed -i "s/snapshot-interval = 0/snapshot-interval = 10/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+  sed -i "s/snapshot-keep-recent = 2/snapshot-keep-recent = 20/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+
+  sed -i "s/pruning = \"default\"/pruning = \"custom\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+  sed -i "s/pruning-interval = \"0\"/pruning-interval = \"100\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
 
   if [ "$NODE_TYPE" = "val" ]; then
     sed -i "s/indexer = \"kv\"/indexer = \"null\"/g" "${NODE_TMP_UND_HOME}/config/config.toml"
@@ -464,11 +473,14 @@ EOL
   REST_PORT_START=$(awk "BEGIN {print $REST_PORT_START+1}")
 
   if [ "$NODE_TYPE" = "rpc" ]; then
-    sed -i "s/pruning = \"default\"/pruning = \"nothing\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+    #sed -i "s/pruning = \"default\"/pruning = \"nothing\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+    sed -i "s/pruning-keep-recent = \"0\"/pruning-keep-recent = \"363000\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/enable = false/enable = true/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/swagger = false/swagger = true/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/address = \"tcp:\/\/0.0.0.0:1317\"/address = \"tcp:\/\/0.0.0.0:$REST_PORT\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
     sed -i "s/denom-to-suggest = \"uatom\"/denom-to-suggest = \"nund\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
+  else
+    sed -i "s/pruning-keep-recent = \"0\"/pruning-keep-recent = \"100\"/g" "${NODE_TMP_UND_HOME}/config/app.toml"
   fi
 
   echo "${NODE_NAME}" >> "${GENERATED_NETWORK}"
@@ -698,7 +710,7 @@ fi
 
 mkdir -p "${NODE_ASSETS_DIR}"
 mkdir -p "${ASSET_KEYS_DIR_UND}"
-mkdir -p "${ASSET_KEYS_DIR_SIMD}"
+mkdir -p "${ASSET_KEYS_DIR_GAIAD}"
 mkdir -p "${ASSETS_SCRIPTS_DIR}"
 mkdir -p "${ASSETS_TXS_DIR}"
 
@@ -723,7 +735,6 @@ fi
 
 # initialise docker-compose.yml
 cat >"${DOCKER_COMPOSE}" <<EOL
-version: "3"
 services:
 EOL
 
@@ -799,34 +810,47 @@ if [ "$STATIC_ACCOUNTS" != "null" ]; then
   done
 fi
 
+# Payment stream test accounts
+for (( i=1; i<=NUM_PAYMENT_STREAM_SENDERS; i++ ))
+do
+  TEST_ACC_NAME="ps_s${i}"
+  generate_account_and_add_to_genesis "${TEST_ACC_NAME}" "${ACCOUNT_START_NUND}"
+done
+
+for (( i=1; i<=NUM_PAYMENT_STREAM_RECEIVERS; i++ ))
+do
+  TEST_ACC_NAME="ps_r${i}"
+  generate_account_and_add_to_genesis "${TEST_ACC_NAME}" "${ACCOUNT_START_NUND}"
+done
+
 sed -i "s/__POP_TXS_TEST_ACCS__/$POP_TXS_TEST_ACCS/g" "${ASSETS_SCRIPTS_DIR}"/populate_txs.sh
 sed -i "s/__POP_TXS_USER_ACC_SEQUENCESS__/$POP_TXS_USER_ACC_SEQUENCESS/g" "${ASSETS_SCRIPTS_DIR}"/populate_txs.sh
 
-# Init IBC Simd
-init_ibc_simd
+# Init IBC gaiad
+init_ibc_gaiad
 
 # IBC Test accounts
 for (( i=1; i<=NUM_IBC_ACCOUNTS; i++ ))
 do
   IBC_UND_ACC_NAME="ibc_und${i}"
-  IBC_SIMD_ACC_NAME="ibc_simd${i}"
+  IBC_GAIAD_ACC_NAME="ibc_gaiad${i}"
   generate_ibc_test_account "${i}" "ibc" "${ACCOUNT_START_NUND}"
   POP_TXS_IBC_ACCS_FUND+="\"${IBC_UND_ACC_NAME}\" "
   POP_TXS_IBC_ACC_SEQUENCESS_FUND+="0 "
-  POP_TXS_IBC_ACCS_SIMD+="\"${IBC_SIMD_ACC_NAME}\" "
-  POP_TXS_IBC_ACC_SEQUENCESS_SIMD+="0 "
+  POP_TXS_IBC_ACCS_GAIAD+="\"${IBC_GAIAD_ACC_NAME}\" "
+  POP_TXS_IBC_ACC_SEQUENCESS_GAIAD+="0 "
 done
 
 sed -i "s/__POP_TXS_IBC_ACCS_FUND__/$POP_TXS_IBC_ACCS_FUND/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
 sed -i "s/__POP_TXS_IBC_ACC_SEQUENCESS_FUND__/$POP_TXS_IBC_ACC_SEQUENCESS_FUND/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
-sed -i "s/__POP_TXS_IBC_ACCS_SIMD__/$POP_TXS_IBC_ACCS_SIMD/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
-sed -i "s/__POP_TXS_IBC_ACC_SEQUENCESS_SIMD__/$POP_TXS_IBC_ACC_SEQUENCESS_SIMD/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
+sed -i "s/__POP_TXS_IBC_ACCS_GAIAD__/$POP_TXS_IBC_ACCS_GAIAD/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
+sed -i "s/__POP_TXS_IBC_ACC_SEQUENCESS_GAIAD__/$POP_TXS_IBC_ACC_SEQUENCESS_GAIAD/g" "${ASSETS_SCRIPTS_DIR}"/populate_ibc.sh
 
 # IBC RELAYER ACC
 generate_ibc_test_account "1" "hermes" "${ACCOUNT_START_NUND}"
 
 mv "${ASSET_KEYS_DIR_UND}"/keyring-test/* "${ASSET_KEYS_DIR_UND}"
-cp "${TMP_DIR}"/ibc_net/node/keyring-test/* "${ASSET_KEYS_DIR_SIMD}"
+cp "${TMP_DIR}"/ibc_net/node/keyring-test/* "${ASSET_KEYS_DIR_GAIAD}"
 rmdir "${ASSET_KEYS_DIR_UND}"/keyring-test/
 
 cp -r "${TMP_DIR}"/ibc_net "${ASSETS_DIR}"/ibc_net/
@@ -917,9 +941,9 @@ TX_RUNNER_IP="${SUBNET}.${IP_START}"
 IP_START=$(awk "BEGIN {print $IP_START+1}")
 PROXY_IP="${SUBNET}.${IP_START}"
 
-# IBC SIMD IP
+# IBC GAIAD IP
 IP_START=$(awk "BEGIN {print $IP_START+1}")
-IBC_SIMD_IP="${SUBNET}.${IP_START}"
+IBC_GAIAD_IP="${SUBNET}.${IP_START}"
 
 # Hermes IP
 IP_START=$(awk "BEGIN {print $IP_START+1}")
@@ -927,11 +951,11 @@ HERMES_IP="${SUBNET}.${IP_START}"
 
 HERMES_FUND_RPC="${RPC1_IP}:${RPC1_PORT}"
 HERMES_FUND_GRPC="${RPC1_IP}:${RPC1_GRPC_PORT}"
-HERMES_SIMD_RPC="${IBC_SIMD_IP}:${IBC_NODE_RPC_PORT}"
-HERMES_SIMD_GRPC="${IBC_SIMD_IP}:${IBC_NODE_GRPC_PORT}"
+HERMES_GAIAD_RPC="${IBC_GAIAD_IP}:${IBC_NODE_RPC_PORT}"
+HERMES_GAIAD_GRPC="${IBC_GAIAD_IP}:${IBC_NODE_GRPC_PORT}"
 HERMES_MNEMONIC=$(cat < "${ASSETS_DIR}/ibc_net/wallets/hermes1.json" | jq -r ".mnemonic")
 
-config_hermes "${HERMES_FUND_RPC}" "${HERMES_FUND_GRPC}" "${HERMES_SIMD_RPC}" "${HERMES_SIMD_GRPC}"
+config_hermes "${HERMES_FUND_RPC}" "${HERMES_FUND_GRPC}" "${HERMES_GAIAD_RPC}" "${HERMES_GAIAD_GRPC}"
 
 cp "${BASE_TEMPLATES_DIR}"/configs/nginx.conf "${ASSETS_DIR}"/nginx.conf
 sed -i "s/__RPC__/${RPC1_IP}:${RPC1_REST_PORT}/g" "${ASSETS_DIR}/nginx.conf"
@@ -952,7 +976,7 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
     command: >
       /bin/bash -c "
         cd /root &&
-        ./scripts/populate_wrapper.sh "${UPGRADE_HEIGHT}" "${RPC1_IP}" "${RPC1_PORT}" ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_SIMD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
+        ./scripts/populate_wrapper.sh "${UPGRADE_HEIGHT}" "${RPC1_IP}" "${RPC1_PORT}" ${STORAGE_PURCHASE} "${UPGRADE_PLAN_NAME}" "http://${HERMES_GAIAD_RPC}" "${CHAIN_ID}" "${IBC_CHAIN_ID}"
       "
     networks:
       ${DOCKER_NETWORK}:
@@ -960,30 +984,30 @@ cat >>"${DOCKER_COMPOSE}" <<EOL
     volumes:
       - ./out/tx_runner:/root/out:rw
 
-  ${CONTAINER_PREFIX}ibc_simd:
-    hostname: ${CONTAINER_PREFIX}ibc_simd
+  ${CONTAINER_PREFIX}ibc_gaiad:
+    hostname: ${CONTAINER_PREFIX}ibc_gaiad
     build:
       context: .
-      dockerfile: docker/ibc_simd.Dockerfile
+      dockerfile: docker/ibc_gaiad.Dockerfile
       args:
         UND_GENESIS_VER: "${UND_GENESIS_VER}"
         IBC_VER: "${IBC_VER}"
-    container_name: ${CONTAINER_PREFIX}ibc_simd
+    container_name: ${CONTAINER_PREFIX}ibc_gaiad
     command: >
       /bin/bash -c "
         cd /root &&
-        ./run_ibc_simd.sh
+        ./run_ibc_gaiad.sh
       "
     networks:
       ${DOCKER_NETWORK}:
-        ipv4_address: ${IBC_SIMD_IP}
+        ipv4_address: ${IBC_GAIAD_IP}
     ports:
       - "${IBC_NODE_P2P_PORT}:${IBC_NODE_P2P_PORT}"
       - "${IBC_NODE_RPC_PORT}:${IBC_NODE_RPC_PORT}"
       - "${IBC_NODE_REST_PORT}:${IBC_NODE_REST_PORT}"
       - "${IBC_NODE_GRPC_PORT}:${IBC_NODE_GRPC_PORT}"
     volumes:
-      - ./out/ibc_simd:/root/out:rw
+      - ./out/ibc_gaiad:/root/out:rw
 
   ${CONTAINER_PREFIX}ibc_hermes:
     hostname: ${CONTAINER_PREFIX}ibc_hermes
@@ -1048,40 +1072,35 @@ function process_gov_txs() {
   local TX_PROP
   local TX_JSON_FILE
   local PROP_JSON
+  local PROP_IDX
+  local TX_DEP
+  PROP_IDX=0
   GOV_TXS=$(get_conf ".apps.und.txs.gov")
   if [ "$GOV_TXS" != "null" ]; then
     echo "process pre-defined gov txs"
     for row in $(echo "${PRE_DEFINED_TXS}" | jq -r ".gov[] | @base64"); do
-      TX_ID=$(_jq "${row}" '.id')
+      TX_ID="${PROP_IDX}"
+      PROP_IDX=$(awk "BEGIN {print $PROP_IDX+1}")
       TX_TITLE=$(_jq "${row}" '.title')
       TX_DESC=$(_jq "${row}" '.description')
-      TX_PROP_TYPE=$(_jq "${row}" '.type')
-      TX_PROP=$(_jq "${row}" '.proposal')
+      TX_PROP=$(_jq "${row}" '.proposal_msgs')
+      TX_DEP=$(_jq "${row}" '.deposit')
       TX_JSON_FILE="${ASSETS_TXS_DIR}/gov.${TX_ID}.json"
 
-      if [ "$TX_PROP_TYPE" = "param_change" ]; then
-        PROP_JSON=$(cat <<EOF
+      PROP_JSON=$(cat <<EOF
 {
-  "title": "${TX_TITLE}",
-  "description": "${TX_DESC}",
-  "changes": ${TX_PROP},
-  "deposit": "${MIN_GOV_DEPOSIT}nund"
+ "messages": ${TX_PROP},
+ "metadata": "ipfs://CID",
+ "deposit": "${TX_DEP}",
+ "title": "${TX_TITLE}",
+ "summary": "${TX_DESC}"
 }
 EOF
 )
-        echo "${PROP_JSON}" | jq > "${TX_JSON_FILE}"
-      fi
+      echo "${PROP_JSON}" | jq > "${TX_JSON_FILE}"
     done
   fi
 }
-
-#"deposit": [
- #    {
- #      "denom": "nund",
- #      "amount": "${MIN_GOV_DEPOSIT}"
- #    }
- #  ]
-
 
 # Governance
 if [ "$PRE_DEFINED_TXS" != "null" ]; then
@@ -1091,6 +1110,37 @@ if [ "$PRE_DEFINED_TXS" != "null" ]; then
 else
   echo "No pre-defined txs"
 fi
+
+# Upgrade proposal
+cat >"${ASSETS_TXS_DIR}/upgrade_proposal_meta.json" <<EOL
+{
+ "title": "test upgrade to ${UPGRADE_PLAN_NAME}"
+}
+EOL
+
+BASE64_META=$( base64 -w 0 "${ASSETS_TXS_DIR}/upgrade_proposal_meta.json" )
+
+cat >"${ASSETS_TXS_DIR}/upgrade_proposal.json" <<EOL
+{
+ "messages": [
+  {
+   "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade",
+   "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+   "plan": {
+    "name": "${UPGRADE_PLAN_NAME}",
+    "time": "0001-01-01T00:00:00Z",
+    "height": "${UPGRADE_HEIGHT}",
+    "info": "",
+    "upgraded_client_state": null
+   }
+  }
+ ],
+ "metadata": "ipfs://CID",
+ "deposit": "10000000000nund",
+ "title": "test upgrade to ${UPGRADE_PLAN_NAME}",
+ "summary": "test upgrade to ${UPGRADE_PLAN_NAME}"
+}
+EOL
 
 rm -rf "${TMP_DIR}"
 

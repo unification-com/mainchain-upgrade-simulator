@@ -12,16 +12,14 @@ ARG IBC_VER
 WORKDIR /root
 
 RUN mkdir -p /usr/local/bin && \
-    git clone https://github.com/cosmos/ibc-go && \
-    cd ibc-go && \
-    git checkout v${IBC_VER} && \
-    make build && \
-    mv build/simd /usr/local/bin/simd && \
-    /usr/local/bin/simd version
+    wget https://github.com/cosmos/gaia/releases/download/v${IBC_VER}/gaiad-v${IBC_VER}-linux-amd64 && \
+    mv gaiad-v${IBC_VER}-linux-amd64 /usr/local/bin/gaiad && \
+    chmod +x /usr/local/bin/gaiad && \
+    /usr/local/bin/gaiad version
 
 RUN rm -rf /root/.simapp
 
 COPY generated/assets/ibc_net/node /root/.simapp
-COPY generated/assets/scripts/run_ibc_simd.sh ./
+COPY generated/assets/scripts/run_ibc_gaiad.sh ./
 
-RUN chmod +x run_ibc_simd.sh
+RUN chmod +x run_ibc_gaiad.sh
