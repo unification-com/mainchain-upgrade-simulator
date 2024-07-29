@@ -461,7 +461,7 @@ do
       TX_SUCCESS=$(tx_success "${RES}")
     fi
 
-    update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
+#    update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
 
     CHK=${LAST_HEIGHT_CHECK[$i]}
     UPGRADE_NOTE=""
@@ -487,10 +487,11 @@ do
         RES=$(${UND_BIN} tx "${TYPE}" purchase_storage ${ID} "${STORAGE_PURCHASE}" --from ${ACC} $(get_base_flags) --sequence ${ACC_SEQ})
         process_tx_log "${RES}"
         TX_SUCCESS=$(tx_success "${RES}")
-        update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
+#        update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
         HAS_PURCHASED_STORAGE[$i]="1"
       fi
     fi
   done
   NOW_TIME=$(date +%s)
+  sleep 6s
 done
