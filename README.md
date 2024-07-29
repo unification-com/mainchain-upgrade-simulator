@@ -115,7 +115,15 @@ Bring it back online using
 docker unpause t_dn_fund_sentry1
 ```
 
-## 6. Example commands
+### 4.4 Restart Hermes
+
+After an upgrade has occurred, the `hermes` container will need restarting, for example:
+
+```bash
+docker restart t_dn_ibc_hermes
+```
+
+## 5. Example commands
 
 The `t_dn_tx_runner` container can also be used to run arbitrary queries etc., for example
 
@@ -152,6 +160,101 @@ docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query wrkchain params 
 docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking params --home /root/.und_cli_txs --output json
 ```
 
+IBC Examples
+
+```bash
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx ibc-transfer transfer transfer channel-0 $(docker exec -it t_dn_tx_runner /usr/local/bin/gaiad keys show ibc_gaiad3 -a --keyring-backend test --keyring-dir /root/.gaiad_cli_txs) 10000000000nund \
+  --home /root/.und_cli_txs \
+  --keyring-backend test \
+  --node http://172.25.1.8:26906 \
+  --chain-id FUND-DevNet-2 \
+  --from ibc_und1 \
+  --gas auto \
+  --gas-adjustment 1.2 \
+  --gas-prices 25.0nund \
+  -y
+  
+  
+docker exec -it t_dn_tx_runner /usr/local/bin/gaiad tx ibc-transfer transfer transfer channel-0 $(docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ibc_und1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs) 10000000000ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618 \
+  --home /root/.gaiad_cli_txs \
+  --keyring-backend test \
+  --node http://172.25.1.12:27001 \
+  --chain-id IBC-SimApp-DevNet \
+  --from ibc_gaiad3 \
+  --gas auto \
+  --gas-adjustment 1.2 \
+  --gas-prices 0.1stake \
+  -y
+```
+
+Streams
+
+```bash
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream params --home /root/.und_cli_txs
+
+# calculate flow rate
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream calculate_flow --coin 1000000000000nund --period day --duration 1 --home /root/.und_cli_txs
+
+# get wallet address of receiver
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ps_r1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
+
+# create stream
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream create ADDRESS_FROM_ABOVE 1000000000000nund 11574074 \
+  --from ps_s1 \
+  --keyring-backend test \
+  --node http://172.25.1.8:26906 \
+  --chain-id FUND-DevNet-2 \
+  --gas auto \
+  --gas-adjustment 1.5 \
+  --gas-prices 25.0nund \
+  --home /root/.und_cli_txs
+
+# query streams
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream streams --home /root/.und_cli_txs
+
+# get wallet address of sender
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ps_s1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
+
+# Claim form stream
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream claim ADDRESS_FROM_ABOVE \
+  --from ps_r1 \
+  --keyring-backend test \
+  --node http://172.25.1.8:26906 \
+  --chain-id FUND-DevNet-2 \
+  --gas auto \
+  --gas-adjustment 1.5 \
+  --gas-prices 25.0nund \
+  --home /root/.und_cli_txs
+
+# update flow
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream update-flow RECEIVER_WALLET_ADDRESS 277777777 \
+  --from ps_s1 \
+  --keyring-backend test \
+  --node http://172.25.1.8:26906 \
+  --chain-id FUND-DevNet-2 \
+  --gas auto \
+  --gas-adjustment 1.5 \
+  --gas-prices 25.0nund \
+  --home /root/.und_cli_txs
+  
+# topup deposit
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream topup RECEIVER_WALLET_ADDRESS 1000000000000nund \
+  --from ps_s1 \
+  --keyring-backend test \
+  --node http://172.25.1.8:26906 \
+  --chain-id FUND-DevNet-2 \
+  --gas auto \
+  --gas-adjustment 1.5 \
+  --gas-prices 25.0nund \
+  --home /root/.und_cli_txs
+
+# query tx hash reference command
+docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query tx TX_HASH --home /root/.und_cli_txs
+
+```
+
+
+
 TMP - CHECKING MIN COMMISSION - EXECUTE AFTER UPGRADE & PROPOSAL PASSES
 This should occur (using the default config in `example.config.json`) at around block 75
 
@@ -167,6 +270,4 @@ docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-valida
 
 docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-validator --commission-rate "0.05" --from validator4 --home /root/.und_cli_txs --keyring-backend test --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund
 ```
-
-
 
