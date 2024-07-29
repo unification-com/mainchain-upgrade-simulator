@@ -68,7 +68,7 @@ function get_containers() {
   D=$(check_docker)
 
   if [ "$D" = "1" ]; then
-    for row in $(docker compose ps --format json | jq -r '.[] | @base64'); do
+    for row in $(docker compose ps --format json | jq -sc '.[] | if type=="array" then .[] else . end' | jq -s | jq -r '.[] | @base64'); do
       _jq() {
         echo ${row} | base64 --decode | jq -r ${1}
       }
@@ -148,7 +148,7 @@ function get_total_supply() {
   if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
     TOT_S=$(curl -s http://localhost:1320/mainchain/enterprise/v1/supply/nund | jq -r '.amount.amount')
     if [ "$TOT_S" -gt "0" ]; then
-      TOTAL_SUPPLY=$(awk "BEGIN {print $TOT_S/(1000000000)}")
+      TOTAL_SUPPLY=$(echo "${TOT_S}" | awk '{printf("%.2f", $1/(1000000000))}')
     fi
   fi
 }
@@ -158,7 +158,7 @@ function get_locked_efund() {
   if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
     TOTAL_L=$(curl -s http://localhost:1320/mainchain/enterprise/v1/locked | jq -r '.amount.amount')
     if [ "$TOTAL_L" -gt "0" ]; then
-      TOTAL_LOCKED_EFUND=$(awk "BEGIN {print $TOTAL_L/(1000000000)}")
+      TOTAL_LOCKED_EFUND=$(echo "${TOTAL_L}" | awk '{printf("%.2f", $1/(1000000000))}')
     fi
   fi
 }
@@ -168,7 +168,7 @@ function get_spent_efund() {
   if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
     TOTAL_SP=$(curl -s http://localhost:1320/mainchain/enterprise/v1/total_spent | jq -r '.amount.amount')
     if [ "$TOTAL_SP" -gt "0" ]; then
-      TOTAL_SPENT_EFUND=$(awk "BEGIN {print $TOTAL_SP/(1000000000)}")
+      TOTAL_SPENT_EFUND=$(echo "${TOTAL_SP}" | awk '{printf("%.2f", $1/(1000000000))}')
     fi
   fi
 }
@@ -184,7 +184,7 @@ function get_ibc_supply() {
     AMNT=$(echo "${TOT_IBC}" | jq -r ".amount")
   fi
   if [ "$AMNT" -gt "0" ]; then
-    TOTAL_IBC_SUPPLY=$(awk "BEGIN {print $AMNT/(1000000000)}")
+    TOTAL_IBC_SUPPLY=$(echo "${AMNT}" | awk '{printf("%.2f", $1/(1000000000))}')
   fi
 }
 
@@ -213,11 +213,11 @@ function print_results() {
   printf "Total Valid Txs       : %s\n" "${TOTAL_VALID_TXS}"
   printf "Total Invalid Txs     : %s\n\n" "${TOTAL_INVALID_TXS}"
 
-  printf "Total Locked eFUND    : %'.0f\n" "${TOTAL_LOCKED_EFUND}"
-  printf "Total Spent eFUND     : %'.0f\n" "${TOTAL_SPENT_EFUND}"
-  printf "Total Supply          : %'.0f\n\n" "${TOTAL_SUPPLY}"
+  printf "Total Locked eFUND    : %'.2f\n" "${TOTAL_LOCKED_EFUND}"
+  printf "Total Spent eFUND     : %'.2f\n" "${TOTAL_SPENT_EFUND}"
+  printf "Total Supply          : %'.2f\n\n" "${TOTAL_SUPPLY}"
 
-  printf "Total on IBC Chain    : %'.3f\n\n" "${TOTAL_IBC_SUPPLY}"
+  printf "Total on IBC Chain    : %'.2f\n" "${TOTAL_IBC_SUPPLY}"
 }
 
 function setup() {

@@ -60,37 +60,38 @@
         "num_wrhchains": 5,
         "num_beacons": 5,
         "num_tests": 10,
-        "storage_purchase": 100
+        "storage_purchase": 100,
+        "static": [
+          {
+            "address": "und1234...",
+            "nund": 10000000000
+          }
+        ],
+        "payment_streams": {
+          "senders": 2,
+          "receivers": 2
+        }
       },
       "txs": {
         "gov": [
           {
-            "id": 1,
             "title": "Staking parameters",
             "description": "set MaxValidators to 96",
             "passes": "yes",
-            "submit_height": 15,
-            "type": "param_change",
-            "proposal": [
+            "submit_height": 55,
+            "deposit": "10000000000nund",
+            "proposal_msgs": [
               {
-                "subspace": "staking",
-                "key": "MaxValidators",
-                "value": 96
-              }
-            ]
-          },
-          {
-            "id": 2,
-            "title": "Staking parameters",
-            "description": "test enforced > 0% commission",
-            "passes": "yes",
-            "submit_height": 50,
-            "type": "param_change",
-            "proposal": [
-              {
-                "subspace": "staking",
-                "key": "MinCommissionRate",
-                "value": "0.05"
+                "@type": "/cosmos.staking.v1beta1.MsgUpdateParams",
+                "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+                "params": {
+                  "unbonding_time": "1814400s",
+                  "max_validators": 96,
+                  "max_entries": 7,
+                  "historical_entries": 10000,
+                  "bond_denom": "nund",
+                  "min_commission_rate": "0.000000000000000000"
+                }
               }
             ]
           }
@@ -99,7 +100,7 @@
     },
     "ibc": {
       "version": "5.3.1",
-      "hermes_version": "1.5.1",
+      "hermes_version": "1.8.2",
       "chain_id": "IBC-SimApp-DevNet",
       "accounts": {
         "num_ibc_accounts": 5

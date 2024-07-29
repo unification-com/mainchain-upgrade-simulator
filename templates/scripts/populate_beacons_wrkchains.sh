@@ -232,6 +232,14 @@ function update_acc_sequence() {
   fi
 }
 
+function update_all_user_acc_sequences() {
+  printf "[%s] [%s] update all user acc sequences\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+  for i in ${!USER_ACCS[@]}
+  do
+    ACC_SEQUENCESS[$i]=$(get_curr_acc_sequence "${USER_ACCS[$i]}")
+  done
+}
+
 for i in ${!ENT_ACCS[@]}
 do
   check_accounts_exist "${ENT_ACCS[$i]}"
@@ -419,6 +427,8 @@ do
     fi
   fi
 
+  update_all_user_acc_sequences
+
   LAST_HEIGHT=$(awk "BEGIN {print $CURRENT_HEIGHT-1}")
   for i in ${!USER_ACCS[@]}
   do
@@ -451,7 +461,7 @@ do
       TX_SUCCESS=$(tx_success "${RES}")
     fi
 
-    update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
+#    update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
 
     CHK=${LAST_HEIGHT_CHECK[$i]}
     UPGRADE_NOTE=""
@@ -477,10 +487,11 @@ do
         RES=$(${UND_BIN} tx "${TYPE}" purchase_storage ${ID} "${STORAGE_PURCHASE}" --from ${ACC} $(get_base_flags) --sequence ${ACC_SEQ})
         process_tx_log "${RES}"
         TX_SUCCESS=$(tx_success "${RES}")
-        update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
+#        update_acc_sequence "${TX_SUCCESS}" "${ACC}" "${i}" "${ACC_SEQ}"
         HAS_PURCHASED_STORAGE[$i]="1"
       fi
     fi
   done
   NOW_TIME=$(date +%s)
+  sleep 6s
 done

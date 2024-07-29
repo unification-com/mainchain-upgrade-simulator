@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine3.15 AS und_builder
+FROM golang:1.22-alpine AS und_builder
 
 RUN apk update && \
     apk upgrade && \
@@ -27,7 +27,7 @@ RUN mkdir -p /usr/local/bin && \
     /root/mainchain/build/und version && \
     mv /root/mainchain/build/und /usr/local/bin/und_upgrade
 
-FROM golang:1.19-alpine3.15
+FROM golang:1.22-alpine
 
 WORKDIR /root/
 

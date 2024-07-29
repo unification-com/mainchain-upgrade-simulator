@@ -3,7 +3,7 @@
 UND_BIN="/usr/local/bin/und_genesis"
 UNDOLD_BIN="/usr/local/bin/und_genesis"
 UNDNEW_BIN="/usr/local/bin/und_upgrade"
-SIMD_BIN="/usr/local/bin/simd"
+GAIAD_BIN="/usr/local/bin/gaiad"
 UPGRADE_HEIGHT=$1
 DEVNET_RPC_IP=$2
 DEVNET_RPC_PORT=$3
@@ -16,9 +16,9 @@ DEVNET_RPC_TCP="tcp://${DEVNET_RPC_IP}:${DEVNET_RPC_PORT}"
 DEVNET_RPC_HTTP="http://${DEVNET_RPC_IP}:${DEVNET_RPC_PORT}"
 BROADCAST_MODE="sync"
 GAS_PRICES="25.0nund"
-SIMD_GAS_PRICES="1.0stake"
+GAIAD_GAS_PRICES="1.0stake"
 UND_HOME="/root/.und_cli_txs"
-IBC_HOME="/root/.simd_cli_txs"
+IBC_HOME="/root/.gaiad_cli_txs"
 
 # in DevNet, this will always be derived from "transfer/channel-0/nund"
 # See https://tutorials.cosmos.network/tutorials/6-ibc-dev/#how-are-ibc-denoms-derived
@@ -26,8 +26,8 @@ IBC_DENOM="ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618"
 
 IBC_ACCS_FUND=(__POP_TXS_IBC_ACCS_FUND__)
 IBC_ACC_SEQUENCESS_FUND=( __POP_TXS_IBC_ACC_SEQUENCESS_FUND__)
-IBC_ACCS_SIMD=(__POP_TXS_IBC_ACCS_SIMD__)
-IBC_ACC_SEQUENCESS_SIMD=( __POP_TXS_IBC_ACC_SEQUENCESS_SIMD__)
+IBC_ACCS_GAIAD=(__POP_TXS_IBC_ACCS_GAIAD__)
+IBC_ACC_SEQUENCESS_GAIAD=( __POP_TXS_IBC_ACC_SEQUENCESS_GAIAD__)
 
 CURRENT_HEIGHT=0
 
@@ -90,7 +90,7 @@ function get_bin() {
   if [ "$DAEMON" = "und" ]; then
     EXE=${UND_BIN}
   else
-    EXE=${SIMD_BIN}
+    EXE=${GAIAD_BIN}
   fi
 
   echo "${EXE}"
@@ -126,7 +126,7 @@ function get_gas_prices() {
   if [ "$DAEMON" = "und" ]; then
     GP=${GAS_PRICES}
   else
-    GP=${SIMD_GAS_PRICES}
+    GP=${GAIAD_GAS_PRICES}
   fi
 
   echo "${GP}"
@@ -230,9 +230,9 @@ function update_user_acc_sequences() {
     IBC_ACC_SEQUENCESS_FUND[$i]=$(get_curr_acc_sequence "${IBC_ACCS_FUND[$i]}" "und")
   done
 
-  for i in ${!IBC_ACCS_SIMD[@]}
+  for i in ${!IBC_ACCS_GAIAD[@]}
   do
-    IBC_ACC_SEQUENCESS_SIMD[$i]=$(get_curr_acc_sequence "${IBC_ACCS_SIMD[$i]}" "simd")
+    IBC_ACC_SEQUENCESS_GAIAD[$i]=$(get_curr_acc_sequence "${IBC_ACCS_GAIAD[$i]}" "gaiad")
   done
 }
 
@@ -263,12 +263,12 @@ function get_balance() {
 function get_all_balances() {
   for i in ${!IBC_ACCS_FUND[@]}
   do
-    SIMD_ACC=${IBC_ACCS_SIMD[$i]}
+    GAIAD_ACC=${IBC_ACCS_GAIAD[$i]}
     UND_ACC=${IBC_ACCS_FUND[$i]}
     printf "[%s] [%s] get und balances for %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${UND_ACC}"
     get_balance "${UND_ACC}" "und"
-    printf "[%s] [%s] get simd balances for %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${SIMD_ACC}"
-    get_balance "${SIMD_ACC}" "simd"
+    printf "[%s] [%s] get gaiad balances for %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${GAIAD_ACC}"
+    get_balance "${GAIAD_ACC}" "gaiad"
   done
 }
 
@@ -333,13 +333,13 @@ function tx_success() {
   echo "${SUCCESS}"
 }
 
-function send_ibc_fund_to_simd() {
+function send_ibc_fund_to_gaiad() {
   set_und_bin
-  printf "[%s] [%s] SEND FROM FUND TO SIMD\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+  printf "[%s] [%s] SEND FROM FUND TO GAIAD\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 
   for i in ${!IBC_ACCS_FUND[@]}
   do
-    TO_ACC=${IBC_ACCS_SIMD[$i]}
+    TO_ACC=${IBC_ACCS_GAIAD[$i]}
     FROM_ACC=${IBC_ACCS_FUND[$i]}
 
     FROM_ACC_SEQ=${IBC_ACC_SEQUENCESS_FUND[$i]}
@@ -347,40 +347,41 @@ function send_ibc_fund_to_simd() {
     RND_AMOUNT_MUL=$(awk "BEGIN {print $RND_AMOUNT*(10000)}")
     AMOUNT="${RND_AMOUNT_MUL}nund"
 
-    printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" "${FROM_ACC}" "${TO_ACC}" $(get_addr ${TO_ACC} "simd")
+    printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" "${FROM_ACC}" "${TO_ACC}" $(get_addr ${TO_ACC} "gaiad")
 
-    RES=$(${UND_BIN} tx ibc-transfer transfer transfer channel-0 $(get_addr ${TO_ACC} "simd") ${AMOUNT} --from ${FROM_ACC} $(get_base_flags "und") $(get_gas_flags "und") --sequence "${FROM_ACC_SEQ}")
+    RES=$(${UND_BIN} tx ibc-transfer transfer transfer channel-0 $(get_addr ${TO_ACC} "gaiad") ${AMOUNT} --from ${FROM_ACC} $(get_base_flags "und") $(get_gas_flags "und") --sequence "${FROM_ACC_SEQ}")
     process_tx_log "${RES}"
   done
 }
 
-function send_ibc_fund_from_simd() {
-  printf "[%s] [%s] SEND FROM SIMD TO FUND\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+function send_ibc_fund_from_gaiad() {
+  printf "[%s] [%s] SEND FROM GAIAD TO FUND\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 
-  for i in ${!IBC_ACCS_SIMD[@]}
+  for i in ${!IBC_ACCS_GAIAD[@]}
     do
       TO_ACC=${IBC_ACCS_FUND[$i]}
-      FROM_ACC=${IBC_ACCS_SIMD[$i]}
+      FROM_ACC=${IBC_ACCS_GAIAD[$i]}
 
-      FROM_ACC_SEQ=${IBC_ACC_SEQUENCESS_SIMD[$i]}
+      FROM_ACC_SEQ=${IBC_ACC_SEQUENCESS_GAIAD[$i]}
 
-      IBC_BALANCE=$(get_denom_balance $(get_addr "${FROM_ACC}" "simd") "${IBC_DENOM}" "simd")
+      IBC_BALANCE=$(get_denom_balance $(get_addr "${FROM_ACC}" "gaiad") "${IBC_DENOM}" "gaiad")
       # 1. print current balance
       # 2. subtract random amount
       # 3. send modified amount
 
       if [ "$IBC_BALANCE" -gt "10" ]; then
-        RND_AMOUNT=$(head -200 /dev/urandom | cksum | cut -f1 -d " ")
-        if [ "$RND_AMOUNT" -lt "$IBC_BALANCE" ]; then
-          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-$RND_AMOUNT}")
-        else
-          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-10}")
-        fi
+#        RND_AMOUNT=$(head -200 /dev/urandom | cksum | cut -f1 -d " ")
+#        if [ "$RND_AMOUNT" -lt "$IBC_BALANCE" ]; then
+#          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-$RND_AMOUNT}")
+#        else
+#          SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-10}")
+#        fi
+        SEND_AMOUNT=$(awk "BEGIN {print $IBC_BALANCE-10}")
         AMOUNT="${SEND_AMOUNT}${IBC_DENOM}"
 
-        printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" $(get_addr ${FROM_ACC} "simd") "${TO_ACC}" $(get_addr ${TO_ACC} "und")
+        printf "[%s] [%s] send %s from %s to %s (%s)\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${AMOUNT}" $(get_addr ${FROM_ACC} "gaiad") "${TO_ACC}" $(get_addr ${TO_ACC} "und")
 
-        RES=$(${SIMD_BIN} tx ibc-transfer transfer transfer channel-0 $(get_addr ${TO_ACC} "und") ${AMOUNT} --from ${FROM_ACC} $(get_base_flags "simd") $(get_gas_flags "simd") --sequence "${FROM_ACC_SEQ}")
+        RES=$(${GAIAD_BIN} tx ibc-transfer transfer transfer channel-0 $(get_addr ${TO_ACC} "und") ${AMOUNT} --from ${FROM_ACC} $(get_base_flags "gaiad") $(get_gas_flags "gaiad") --sequence "${FROM_ACC_SEQ}")
         process_tx_log "${RES}"
       else
         printf "[%s] [%s] not enough balance to send from %s. IBC balance: %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${FROM_ACC}" "${IBC_BALANCE}"
@@ -393,9 +394,9 @@ do
   check_accounts_exist "${IBC_ACCS_FUND[$i]}" "und"
 done
 
-for i in ${!IBC_ACCS_SIMD[@]}
+for i in ${!IBC_ACCS_GAIAD[@]}
 do
-  check_accounts_exist "${IBC_ACCS_SIMD[$i]}" "simd"
+  check_accounts_exist "${IBC_ACCS_GAIAD[$i]}" "gaiad"
 done
 
 # check IBC channel exists
@@ -429,19 +430,19 @@ do
   sleep 5
 done
 
-until [ $(check_ibc_channel_exists "simd") -ge 1 ]
+until [ $(check_ibc_channel_exists "gaiad") -ge 1 ]
 do
   print_current_block
-  printf "[%s] [%s] Waiting for IBC channel creation on Simd\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
+  printf "[%s] [%s] Waiting for IBC channel creation on gaiad\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
   sleep 5
 done
 
 TOTAL_CHANNELS_UND=$(check_ibc_channel_exists "und")
-TOTAL_CHANNELS_SIMD=$(check_ibc_channel_exists "simd")
+TOTAL_CHANNELS_GAIAD=$(check_ibc_channel_exists "gaiad")
 
 print_current_block
 printf "[%s] [%s] Total FUND IBC channels = %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${TOTAL_CHANNELS_UND}"
-printf "[%s] [%s] Total simd IBC channels = %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${TOTAL_CHANNELS_SIMD}"
+printf "[%s] [%s] Total gaiad IBC channels = %s\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')" "${TOTAL_CHANNELS_GAIAD}"
 
 printf "[%s] [%s] Running transactions\n" "${SCRIPT_ALIAS}" "$(date +'%Y-%m-%d %H:%M:%S.%3N')"
 
@@ -462,15 +463,15 @@ do
   # send some FUND over IBC
   print_current_block
   get_all_balances
-  send_ibc_fund_to_simd
+  send_ibc_fund_to_gaiad
   sleep 7s
   update_all_acc_sequences
 
-  # send IBC denom from simd to FUND
+  # send IBC denom from gaiad to FUND
   sleep 20s
   print_current_block
   get_all_balances
-  send_ibc_fund_from_simd
+  send_ibc_fund_from_gaiad
   update_all_acc_sequences
 done
 
