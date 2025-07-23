@@ -14,7 +14,7 @@ The network is also configured to run:
 - A number of scripts to randomly generate and broadcast transactions, including `enterprise`, `beacon`, `wrkchain`,
 standard Cosmos Txs and IBC transfers
 - A Hermes IBC relayer to process IBC transfers between the chains
-- An NGINX proxy server to allow connections from, for example, Web Wallet.
+- An NGINX proxy server to allow connections from, for example, Web Wallet_old.
 
 The network will also automatically generate the upgrade Governance proposal and vote "yes" for all validators.
 
