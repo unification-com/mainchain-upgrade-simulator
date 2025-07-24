@@ -24,6 +24,8 @@ This suite has been used internally to test upgrading the following:
 - 1.6.3 -> 1.7.0
 - 1.7.0 -> 1.8.1
 - 1.8.2 -> 1.9.0
+- 1.9.x -> 1.10.x
+- 1.10.x -> 1.11.x
 
 ## 1. Configuring a simulation DevNet
 
@@ -81,10 +83,25 @@ A simple monitoring script can optionally be run while the network is up, which 
 the composition up, in a separate terminal, run:
 
 ```bash
-make mon
+cd scripts/nodejs/monitor
+nvm use
+yarn install
+node src/index.mjs
 ```
 
-### 4.2. Run the network
+### 4.2 Run Transactions
+
+The `tx_runner` script can be used to simulate most of the main transaction types on the network (sending, staking
+streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, run:
+
+```bash
+cd scripts/nodejs/tx_runner
+nvm use
+yarn install
+node src/index.mjs
+```
+
+### 4.3. Run the network
 
 The network can be brought up by running:
 
@@ -101,7 +118,7 @@ Ctrl+C
 make down
 ```
 
-### 4.3 Simulate node going offline
+### 4.4 Simulate node going offline
 
 Pause a container to simulate a node going offline, for example
 
@@ -115,7 +132,7 @@ Bring it back online using
 docker unpause t_dn_fund_sentry1
 ```
 
-### 4.4 Restart Hermes
+### 4.5 Restart Hermes
 
 After an upgrade has occurred, the `hermes` container will need restarting, for example:
 
