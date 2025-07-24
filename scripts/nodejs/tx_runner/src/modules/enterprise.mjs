@@ -35,7 +35,7 @@ export class Enterprise{
         const msg = whitelistAddress({
             address: params.address,
             signer: params.wallet.meta.wallet_json.address_bech32,
-            whitelistAction: mainchain.enterprise.v1.WhitelistAction.WHITELIST_ACTION_ADD,
+            action: mainchain.enterprise.v1.WhitelistAction.WHITELIST_ACTION_ADD,
         })
 
         const memo = `${params.wallet.meta.wallet_json.account} whitelist address`

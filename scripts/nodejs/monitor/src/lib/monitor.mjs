@@ -221,6 +221,8 @@ export class UpgradeMonitor {
         await this.fetchNumReggedBeacons()
         await this.fetchNumReggedWrkchains()
         await this.fetchEfundPurchaseOrders()
+        await this.fetchEfundtotalSupply()
+        await this.fetchSpentEfund()
         await this.fetchCommunityPool()
         await this.fetchBondedTokens()
         this.printStats()

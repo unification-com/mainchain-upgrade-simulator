@@ -26,6 +26,7 @@ function config_fund_genesis() {
   # Modify for nund etc.
   sed -i "s/stake/nund/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"voting_period\": \"172800s\"/\"voting_period\": \"90s\"/g" "${L_HOME}/config/genesis.json"
+  sed -i "s/\"expedited_voting_period\": \"86400s\"/\"expedited_voting_period\": \"60s\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"max_deposit_period\": \"172800s\"/\"max_deposit_period\": \"90s\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"fee_purchase_storage\": \"5000000000\"/\"fee_purchase_storage\": \"1000000000\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"100\"/g" "${L_HOME}/config/genesis.json"
@@ -55,7 +56,7 @@ function add_account_to_genesis() {
 
   L_ADDR=$(get_address_from_acc_name "${L_BIN}" "${L_HOME}" "${L_ACC}" "acc")
 
-  ${L_BIN} genesis add-genesis-account "${L_ADDR}" "${L_AMT}" --home="${L_HOME}"
+  ${L_BIN} genesis add-genesis-account "${L_ADDR}" "${L_AMT}" --home "${L_HOME}" --keyring-backend test
 }
 
 function add_wallet_address_to_genesis() {
@@ -82,6 +83,7 @@ function init_fund_enterprise_accounts() {
   do
     L_ACC_NAME="${TYPE_WALLET_ENTERPRISE}${i}"
     create_and_save_key "${L_BIN}" "${L_HOME}" "${L_ACC_NAME}" "${L_WALLET_DIR}" "${TYPE_WALLET_ENTERPRISE}"
+
     add_account_to_genesis "${L_BIN}" "${L_HOME}" "${L_ACC_NAME}" "${L_AMNT}nund"
     L_ENT_ADDR=$(get_address_from_acc_name "${L_BIN}" "${L_HOME}" "${L_ACC_NAME}" "acc")
     L_ENT_ADDRESSES+="${L_ENT_ADDR},"

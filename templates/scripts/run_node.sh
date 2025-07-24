@@ -10,7 +10,7 @@ fi
 touch "${UND_LOG_FILE}"
 
 if [ "$IS_RPC_NODE" = "1" ]; then
-  mv /root/.und_mainchain/nginx.conf /etc/nginx/conf.d/nginx.conf
+  mv /root/.und_mainchain/nginx.conf /etc/nginx/http.d/rpc.conf
 #  nginx -g 'daemon off;' &
   nginx &
 fi

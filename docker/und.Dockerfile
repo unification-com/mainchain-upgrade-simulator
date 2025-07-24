@@ -55,6 +55,7 @@ RUN mkdir -p /usr/local/bin && \
     cd /root/mainchain && \
     git checkout ${UND_UPGRADE_BRANCH} && \
     export LEDGER_ENABLED=false && \
+    export CGO_ENABLED=0 && \
     make build && \
     /root/mainchain/build/und version && \
     mv /root/mainchain/build/und /usr/local/bin/und
@@ -63,11 +64,12 @@ RUN mkdir -p /usr/local/bin && \
 # Final container
 
 #FROM alpine:latest
-FROM nginx:stable-alpine
+#FROM nginx:stable-alpine
+FROM golang:1.23-alpine
 
 WORKDIR /root/
 
-ENV PACKAGES="wget curl jq bash"
+ENV PACKAGES="wget curl jq bash git make gcc libc-dev jq nginx"
 RUN apk add --no-cache ${PACKAGES}
 
 ARG NODE_NAME

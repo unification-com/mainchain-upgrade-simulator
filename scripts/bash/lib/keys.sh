@@ -38,6 +38,7 @@ function write_key_data() {
   local L_KEY=""
 
   L_RES=$(${L_BIN} keys show "${L_ACC_NAME}" --keyring-backend=test --home="${L_HOME}" --output=json 2>&1)
+
   L_ADDR=$(echo "${L_RES}" | jq -r ".address")
   L_PUBKEY=$(echo "${L_RES}" | jq -r ".pubkey")
 

@@ -32,9 +32,10 @@ cd "${BASE_DIR}" || exit
 # 1. init 1 dummy node for each network
 
 init_node "${UND_BIN}" "${TMP_GLOBAL_UND_HOME}" "${CONF_CHAIN_ID}" "global"
-${UND_BIN} config chain-id "${CONF_CHAIN_ID}" --home "${TMP_GLOBAL_UND_HOME}"
-${UND_BIN} config keyring-backend test --home "${TMP_GLOBAL_UND_HOME}"
-${UND_BIN} config output json --home "${TMP_GLOBAL_UND_HOME}"
+config_global_tmp_node "${UND_BIN}" "${TMP_GLOBAL_UND_HOME}" "${CONF_CHAIN_ID}"
+#${UND_BIN} config client chain-id "${CONF_CHAIN_ID}" --home "${TMP_GLOBAL_UND_HOME}"
+#${UND_BIN} config client keyring-backend test --home "${TMP_GLOBAL_UND_HOME}"
+#${UND_BIN} config client output json --home "${TMP_GLOBAL_UND_HOME}"
 
 config_fund_genesis "${TMP_GLOBAL_UND_HOME}"
 
