@@ -11,3 +11,9 @@ third_party/bin
 config.json
 generated
 docker-compose.yml
+node_modules
+scripts/nodejs/monitor/node_modules
+scripts/nodejs/tx_runner/node_modules
+
+scripts/nodejs/tx_runner/.env
+scripts/nodejs/monitor/.env

@@ -137,8 +137,8 @@ function get_total_txs() {
     INV_TXS=$(get_from_logs "${DOCKER_CONTAINERS[0]}" "100" "executed block height=${HEIGHTS[0]}" ".*num_invalid_txs=\(.*\) num_valid_txs.*")
     LAST_VALID_TXS="${V_TXS}"
     LAST_INVALID_TXS="${INV_TXS}"
-    TOTAL_VALID_TXS=$(awk "BEGIN {print $TOTAL_VALID_TXS+$V_TXS}")
-    TOTAL_INVALID_TXS=$(awk "BEGIN {print $TOTAL_INVALID_TXS+$INV_TXS}")
+#    TOTAL_VALID_TXS=$(awk "BEGIN {print $TOTAL_VALID_TXS+$V_TXS}")
+#    TOTAL_INVALID_TXS=$(awk "BEGIN {print $TOTAL_INVALID_TXS+$INV_TXS}")
   fi
 }
 
@@ -146,7 +146,7 @@ function get_total_supply() {
   local TOT_S
 
   if [ "$LAST_HEIGHT" -gt "0" ] && [ "$LAST_HEIGHT" != "$IGNORE_TOT_SUPPLY_HEIGHT" ] && [ "$LAST_HEIGHT" != "$UPGRADE_HEIGHT" ]; then
-    TOT_S=$(curl -s http://localhost:1320/mainchain/enterprise/v1/supply/nund | jq -r '.amount.amount')
+    TOT_S=$(curl -s http://localhost:1320/cosmos/bank/v1beta1/supply/by_denom?denom=nund | jq -r '.amount.amount')
     if [ "$TOT_S" -gt "0" ]; then
       TOTAL_SUPPLY=$(echo "${TOT_S}" | awk '{printf("%.2f", $1/(1000000000))}')
     fi
@@ -177,7 +177,7 @@ function get_ibc_supply() {
   local TOT_IBC
   local DENOM
   local AMNT=0
-  TOT_IBC=$(curl -s http://localhost:27002/cosmos/bank/v1beta1/supply | jq -r '.supply[0]')
+  TOT_IBC=$(curl -s http://localhost:1322/cosmos/bank/v1beta1/supply | jq -r '.supply[0]')
   DENOM=$(echo "${TOT_IBC}" | jq -r ".denom")
 
   if [ "$DENOM" = "$IBC_DENOM" ]; then

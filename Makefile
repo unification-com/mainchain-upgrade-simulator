@@ -3,7 +3,7 @@ all: down clean gen build up
 all-nc: clean gen build-nc up
 
 gen:
-	./scripts/generate.sh
+	./scripts/bash/generate_v2.sh
 
 build:
 	docker compose build
@@ -18,14 +18,13 @@ down:
 	docker compose down --remove-orphans
 
 mon:
-	@./scripts/monitor.sh
+	@./scripts/bash/monitor.sh
 
 statesync:
-	@./scripts/get_statesync.sh
+	@./scripts/bash/get_statesync.sh
 
 clean:
 	@rm -f ./docker-compose.yml
-	@rm -rf ./out
 	@rm -rf ./generated
 
 .PHONY: all all-nc build build-nc up down gen mon statesync clean
