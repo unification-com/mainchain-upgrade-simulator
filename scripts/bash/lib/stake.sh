@@ -108,6 +108,7 @@ function generate_gentx() {
                      --p2p-port "$(cat < "${L_NET_INFO_FILE}" | jq -r '.p2p_port')" \
                      --node-id "$(cat < "${L_NET_INFO_FILE}" | jq -r '.node_id')" \
                      --pubkey "$(cat < "${L_NET_INFO_FILE}" | jq -r '.val_pubkey_escaped')" \
+                     --chain-id "$(cat < "${L_NET_INFO_FILE}" | jq -r '.chain_id')" \
                      --from "${L_MONIKER}" \
                      --keyring-backend test \
                      --output-document "${L_GENTX_DIR}/${L_MONIKER}.json"

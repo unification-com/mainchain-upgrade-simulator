@@ -14,7 +14,7 @@ The network is also configured to run:
 - A number of scripts to randomly generate and broadcast transactions, including `enterprise`, `beacon`, `wrkchain`,
 standard Cosmos Txs and IBC transfers
 - A Hermes IBC relayer to process IBC transfers between the chains
-- An NGINX proxy server to allow connections from, for example, Web Wallet_old.
+- An NGINX proxy server to allow connections from, for example, Web Wallet.
 
 The network will also automatically generate the upgrade Governance proposal and vote "yes" for all validators.
 
@@ -26,6 +26,7 @@ This suite has been used internally to test upgrading the following:
 - 1.8.2 -> 1.9.0
 - 1.9.x -> 1.10.x
 - 1.10.x -> 1.11.x
+- 1.11.x -> 1.12.x
 
 ## 1. Configuring a simulation DevNet
 
