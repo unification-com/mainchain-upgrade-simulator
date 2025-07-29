@@ -2,34 +2,33 @@
   "apps": {
     "und": {
       "chain_id": "FUND-DevNet-2",
-      "genesis_time": "2023-07-19T10:11:41.253082833Z",
+      "genesis_time": "2025-07-24T10:11:41.253082833Z",
       "genesis": {
-        "version": "1.7.0"
+        "version": "1.11.1"
       },
       "upgrade": {
-        "branch": "v1.8.1",
+        "branch": "taryon",
         "upgrade_height": 50,
-        "upgrade_plan_name": "3-keyleth"
+        "upgrade_plan_name": "7-taryon"
       },
       "nodes": {
-        "num_validators": 4,
-        "num_sentries": 3,
+        "num_validators": 3,
+        "num_sentries": 2,
         "num_seeds": 1,
-        "num_rpcs": 1
+        "num_rpcs": 2
       },
       "staking": {
-        "min_stake": 1000000000000000,
-        "max_stake": 5000000000000000,
-        "small_min_stake": 1000000000000,
-        "small_max_stake": 10000000000000,
-        "acc_start_nund": 5000000000000000,
+        "min_stake": 100000000000000,
+        "max_stake": 500000000000000,
+        "small_min_stake": 100000000000,
+        "small_max_stake": 1000000000000,
         "stake_overrides": [
           {
             "validator": 1,
             "rate": 0,
             "max_rate": 0.1,
             "max_change_rate": 0.01,
-            "stake": 2400000000000000,
+            "stake": 240000000000000,
             "min_self": 1000
           },
           {
@@ -57,57 +56,35 @@
         "ent_po_amount": 100000000000000,
         "num_ent_signers": 3,
         "num_ent_accepts": 2,
-        "num_wrhchains": 5,
-        "num_beacons": 5,
+        "num_wrhchains": 4,
+        "num_beacons": 4,
         "num_tests": 10,
         "storage_purchase": 100,
         "static": [
           {
-            "address": "und1234...",
-            "nund": 10000000000
+            "address": "und1eq239sgefyzm4crl85nfyvt7kw83vrna3f0eed",
+            "nund": "1000000000000000"
           }
         ],
-        "payment_streams": {
-          "senders": 2,
-          "receivers": 2
-        }
-      },
-      "txs": {
-        "gov": [
+        "payment_streams": 5
+      }
+    },
+    "ibc": {
+      "version": "22.3.1",
+      "hermes_version": "1.11.0",
+      "chain_id": "IBC-SimApp-DevNet",
+      "accounts": {
+        "num_ibc_accounts": 10,
+        "static": [
           {
-            "title": "Staking parameters",
-            "description": "set MaxValidators to 96",
-            "passes": "yes",
-            "submit_height": 55,
-            "deposit": "10000000000nund",
-            "proposal_msgs": [
-              {
-                "@type": "/cosmos.staking.v1beta1.MsgUpdateParams",
-                "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
-                "params": {
-                  "unbonding_time": "1814400s",
-                  "max_validators": 96,
-                  "max_entries": 7,
-                  "historical_entries": 10000,
-                  "bond_denom": "nund",
-                  "min_commission_rate": "0.000000000000000000"
-                }
-              }
-            ]
+            "address": "cosmos1z4zjk8srw3mys5uq509ksgg7zuv8k3vte2gh6u",
+            "stake": "1000000000000000"
           }
         ]
       }
     },
-    "ibc": {
-      "version": "5.3.1",
-      "hermes_version": "1.8.2",
-      "chain_id": "IBC-SimApp-DevNet",
-      "accounts": {
-        "num_ibc_accounts": 5
-      }
-    },
     "cosmovisor": {
-      "version": "1.5.0"
+      "version": "1.7.1"
     }
   },
   "docker": {
@@ -115,16 +92,10 @@
     "network": {
       "subnet": "172.25.1",
       "ip_start": 2,
-      "p2p_port_start": 26700,
-      "rpc_port_start": 26900,
-      "rest_port_start": 1324,
-      "grpc_port_start": 9190,
-      "ibc_node": {
-        "p2p": 27000,
-        "rpc": 27001,
-        "rest": 27002,
-        "grpc": 27003
-      }
+      "p2p_port_start": 26660,
+      "rpc_port_start": 26760,
+      "rest_port_start": 1320,
+      "grpc_port_start": 9190
     }
   }
 }

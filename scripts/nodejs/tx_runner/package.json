@@ -5,6 +5,9 @@
   "repository": "git@github.com:unification-com/mainchain-upgrade-simulator.git",
   "author": "Codegnosis <paul@codegnosis.co.uk>",
   "license": "MIT",
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
   "dependencies": {
     "@cosmjs/amino": "^0.33.1",
     "@cosmjs/crypto": "^0.33.1",
@@ -12,7 +15,7 @@
     "@cosmjs/proto-signing": "^0.33.1",
     "@cosmjs/stargate": "^0.33.1",
     "@noble/hashes": "^1.7.2",
-    "@unification-com/fundjs": "^0.0.9",
+    "@unification-com/fundjs": "^0.1.0",
     "chain-registry": "^1.69.169",
     "cosmjs-utils": "^0.1.0",
     "dotenv": "^16.4.7",

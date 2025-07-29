@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
   "dependencies": {
     "@noble/hashes": "^1.7.2",
     "cli-cursor": "^5.0.0",
