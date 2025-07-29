@@ -81,25 +81,35 @@ make build-nc
 ### 4.1. Monitoring
 
 A simple monitoring script can optionally be run while the network is up, which will output some stats. Before bringing
-the composition up, in a separate terminal, run:
+the composition up, in a separate terminal, first install the dependencies:
 
 ```bash
 cd scripts/nodejs/monitor
 nvm use
 yarn install
-node src/index.mjs
+```
+
+The monitor script can be run with the `mon` make target:
+
+```bash
+make mon
 ```
 
 ### 4.2 Run Transactions
 
 The `tx_runner` script can be used to simulate most of the main transaction types on the network (sending, staking
-streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, run:
+streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, first install the dependencies:
 
 ```bash
 cd scripts/nodejs/tx_runner
 nvm use
 yarn install
-node src/index.mjs
+```
+
+The monitor script can be run with the `tx` make target:
+
+```bash
+make tx
 ```
 
 ### 4.3. Run the network

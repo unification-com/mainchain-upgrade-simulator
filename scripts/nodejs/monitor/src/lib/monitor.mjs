@@ -827,12 +827,12 @@ export class UpgradeMonitor {
 
     printWaitForDocker() {
         console.clear()
-        console.log("waiting for docker up")
+        console.log("waiting for docker up (press q to quit)")
         console.log(`Up: ${this.#numContainersUp} / ${this.#numContainers}`)
     }
 
     printWaitForRpc() {
         console.clear()
-        console.log("waiting for FUND RPC up")
+        console.log("waiting for FUND RPC up (press q to quit)")
     }
 }
