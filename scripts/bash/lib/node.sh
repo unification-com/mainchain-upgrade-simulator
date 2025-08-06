@@ -51,7 +51,8 @@ function create_node() {
   "p2p_addr": "${L_P2P_ADDR}",
   "rpc_port": "${L_RPC_PORT}",
   "rest_port": "${L_REST_PORT}",
-  "grpc_port": "${L_GRPC_PORT}"
+  "grpc_port": "${L_GRPC_PORT}",
+  "chain_id": "${L_CHAIN_ID}"
 }
 EOL
 }
