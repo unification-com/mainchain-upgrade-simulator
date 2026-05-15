@@ -59,7 +59,12 @@ max_msg_num = 30
 max_tx_size = 2097152
 clock_drift = '5s'
 max_block_time = '30s'
-trusting_period = '14days'
+# MUST be smaller than the staking unbonding_time (which is '60s' in
+# this devnet's genesis). Set to '40s' to maximise headroom for upgrade
+# halts within that constraint. The deeper fix — bumping the genesis
+# unbonding_time so a multi-minute trusting_period becomes valid — is
+# tracked under simulator-cleanup T1.7.
+trusting_period = '40s'
 trust_threshold = { numerator = '2', denominator = '3' }
 
 [chains.event_source]
