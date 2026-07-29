@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS und_builder
+FROM golang:1.26-alpine AS und_builder
 
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk update && \
