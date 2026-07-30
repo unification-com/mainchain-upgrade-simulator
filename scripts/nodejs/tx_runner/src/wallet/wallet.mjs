@@ -52,6 +52,18 @@ export class Wallet {
     #gasPrice = null
     #gasMultiplier = 1.7
 
+    // Locally tracked signing data.
+    //
+    // Txs are broadcast with broadcastTxSync (fire-and-forget), so a tx sits in the mempool without
+    // the committed account sequence advancing. cosmjs re-reads the sequence from committed state on
+    // every sign, so a second tx from the same wallet in the same block window gets the SAME sequence
+    // and is rejected with "account sequence mismatch ... expected N+1, got N" — always short by
+    // exactly one. Tracking the sequence here and passing it explicitly to sign() removes the race;
+    // resyncSignerData() re-reads from chain whenever a tx errors, so we self-heal.
+    #accountNumber = null
+    #sequence = null
+    #chainId = null
+
     // tx queues
     #sentTxs = []
     #pendingTxs = []
@@ -127,6 +139,38 @@ export class Wallet {
 
     setGasMultiplier(gasMultiplier) {
         this.#gasMultiplier = gasMultiplier
+    }
+
+    // Signing data for the next tx, seeded from chain on first use then tracked locally.
+    async signerData() {
+        if (this.#sequence === null) {
+            await this.resyncSignerData()
+        }
+        return {
+            accountNumber: this.#accountNumber,
+            sequence: this.#sequence,
+            chainId: this.#chainId,
+        }
+    }
+
+    // Re-read account number/sequence from the chain. Called on first use and after any tx error,
+    // so a genuine mismatch (or a tx that never landed) corrects itself on the next attempt.
+    async resyncSignerData() {
+        const addr = this.#meta.wallet_json.address_bech32
+        const {accountNumber, sequence} = await this.#signingClient.getSequence(addr)
+        this.#accountNumber = accountNumber
+        this.#sequence = sequence
+        if (this.#chainId === null) {
+            this.#chainId = await this.#signingClient.getChainId()
+        }
+    }
+
+    // Advance the local sequence after a successful broadcast (the tx is in the mempool, so the next
+    // one must use sequence + 1 even though committed state has not caught up yet).
+    incrementSequence() {
+        if (this.#sequence !== null) {
+            this.#sequence += 1
+        }
     }
 
     calculateFee(gas) {

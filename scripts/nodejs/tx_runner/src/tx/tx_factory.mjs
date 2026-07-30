@@ -1,6 +1,7 @@
 
 import {Logger} from "../libs/logger.mjs";
 import util from "util";
+import {TxRaw} from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
 export class TxFactory {
 
@@ -17,7 +18,12 @@ export class TxFactory {
                 actualFee = wallet.calculateFee(gasEstimate)
             }
 
-            txHash = await wallet.signingClient.signAndBroadcastSync(signer, msgs, actualFee, memo);
+            // Sign with the locally tracked sequence rather than letting cosmjs re-read it from
+            // committed state — see Wallet's signer-data comment for why that races.
+            const signerData = await wallet.signerData()
+            const txRaw = await wallet.signingClient.sign(signer, msgs, actualFee, memo, signerData)
+            txHash = await wallet.signingClient.broadcastTxSync(TxRaw.encode(txRaw).finish())
+            wallet.incrementSequence()
 
             Logger.info(
                 "SEND_TX",
@@ -32,6 +38,13 @@ export class TxFactory {
 
         } catch (e) {
             Logger.error("SEND_TX", `net=${wallet.meta.network.name}`, e.toString())
+            // The tx may not have landed, so the locally tracked sequence can no longer be trusted.
+            // Re-read it from chain rather than letting one failure cascade into every later tx.
+            try {
+                await wallet.resyncSignerData()
+            } catch (resyncErr) {
+                Logger.error("SEND_TX", `net=${wallet.meta.network.name}`, `sequence resync failed: ${resyncErr.toString()}`)
+            }
         }
 
         return txHash

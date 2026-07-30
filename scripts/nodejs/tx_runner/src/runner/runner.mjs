@@ -89,6 +89,12 @@ export class Runner {
             const cosmosClient = await RpcQueryClient.createQueryClient(rpc.rpc, "cosmos")
             const ibcClient = await RpcQueryClient.createQueryClient(rpc.rpc, "ibc")
 
+            // Denom-aware client for the multi-denom x/stream lookups only (see stream.mjs).
+            if (i === 0) {
+                const mainchainV2Client = await RpcQueryClient.createQueryClient(rpc.rpc, "mainchain_v2")
+                PaymentStream.setQueryClient(mainchainV2Client.client)
+            }
+
             queryClients.fund.mainchainClients.push(mainchainClient)
             queryClients.fund.cosmosClients.push(cosmosClient)
             queryClients.fund.ibcClients.push(ibcClient)
@@ -188,6 +194,11 @@ export class Runner {
             Logger.info("=== START FUND BLOCK ACTIONS ===")
             this.#currentBlockHeight = parseInt(block?.header?.height, 10)
             Logger.info("FUND BLOCK HEIGHT", this.#currentBlockHeight)
+            // x/stream became multi-denom in vaxildan: the denom is only a valid message field once
+            // the chain has crossed the upgrade height.
+            PaymentStream.setStreamDenom(this.#currentBlockHeight, this.#upgradeHeight)
+            // BEACON timestamps gain an optional `metadata` field in vaxildan (#129).
+            Beacon.setBeaconMetadata(this.#currentBlockHeight, this.#upgradeHeight)
             await this.checkTxs("fund")
             await this.checkIbcChannels()
 

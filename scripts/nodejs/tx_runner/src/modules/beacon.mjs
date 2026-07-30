@@ -4,10 +4,32 @@ import {Logger} from "../libs/logger.mjs";
 import {TxFactory} from "../tx/tx_factory.mjs";
 import {EFUND_ACTION_STEP} from "../wallet/wallet.mjs";
 import {mainchain} from "@unification-com/fundjs";
-const {registerBeacon, recordBeaconTimestamp} = mainchain.beacon.v1.MessageComposer.withTypeUrl;
+// vaxildan (#129) adds an optional `metadata` field to BEACON timestamps, which fundjs 0.1.0 cannot
+// encode — so the composer for recordBeaconTimestamp comes from 0.2.1 (aliased as fundjs2). With
+// metadata = "" it encodes byte-identically to 0.1.0, so the same call is correct on both sides of
+// the upgrade; the runner sets a value once the chain has crossed the boundary.
+// TODO: drop the alias and move wholesale to fundjs >= 0.2.1 once vaxildan is live.
+import {mainchain as mainchainV2} from "fundjs2";
+const {registerBeacon} = mainchain.beacon.v1.MessageComposer.withTypeUrl;
+const {recordBeaconTimestamp} = mainchainV2.beacon.v1.MessageComposer.withTypeUrl;
 const { createHmac } = await import('node:crypto');
 
 export class Beacon {
+
+    // Optional BEACON timestamp metadata (vaxildan #129, 256-byte cap on chain). Empty until the
+    // chain crosses the upgrade height — pre-vaxildan the field does not exist and the SDK rejects
+    // unknown fields.
+    static beaconMetadata = ""
+
+    // Called by the runner each block so records match the running consensus version.
+    static setBeaconMetadata(currentHeight, upgradeHeight) {
+        const meta = (upgradeHeight > 0 && currentHeight >= upgradeHeight)
+            ? `sim;h=${currentHeight}` : ""
+        if ((meta === "") !== (Beacon.beaconMetadata === "")) {
+            Logger.info("BEACON METADATA", `recording timestamps with metadata from height ${currentHeight}`)
+        }
+        Beacon.beaconMetadata = meta
+    }
     constructor () {}
 
     static MsgTypes = {
@@ -50,6 +72,7 @@ export class Beacon {
             submitTime: submitTime,
             hash: hash,
             owner: params.wallet.meta.wallet_json.address_bech32,
+            metadata: Beacon.beaconMetadata,
         })
 
         const memo = `${params.wallet.meta.wallet_json.account} record`

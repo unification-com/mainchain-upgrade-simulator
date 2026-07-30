@@ -24,6 +24,7 @@
     "node-fetch": "^3.3.2",
     "npmlog": "^7.0.1",
     "reconnecting-websocket": "^4.4.0",
-    "ws": "^8.18.1"
+    "ws": "^8.18.1",
+    "fundjs2": "npm:@unification-com/fundjs@0.2.1"
   }
 }
