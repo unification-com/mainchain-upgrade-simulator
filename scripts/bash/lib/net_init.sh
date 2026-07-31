@@ -29,8 +29,13 @@ function config_fund_genesis() {
   sed -i "s/\"expedited_voting_period\": \"86400s\"/\"expedited_voting_period\": \"60s\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"max_deposit_period\": \"172800s\"/\"max_deposit_period\": \"90s\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"fee_purchase_storage\": \"5000000000\"/\"fee_purchase_storage\": \"1000000000\"/g" "${L_HOME}/config/genesis.json"
-  sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"100\"/g" "${L_HOME}/config/genesis.json"
-  sed -i "s/\"max_storage_limit\": \"600000\"/\"max_storage_limit\": \"200\"/g" "${L_HOME}/config/genesis.json"
+  # BEACON/WRKChain in-state record retention. These were 100/200, which at roughly one record per
+  # block prunes everything older than ~100 blocks — so on a long run all pre-upgrade records are
+  # gone by the time you look, making it impossible to compare pre- vs post-upgrade records (e.g.
+  # BEACON timestamps recorded without the vaxildan `metadata` field). 2000/3000 retains a full
+  # upgrade-height's worth of history while still exercising pruning and storage purchases.
+  sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"2000\"/g" "${L_HOME}/config/genesis.json"
+  sed -i "s/\"max_storage_limit\": \"600000\"/\"max_storage_limit\": \"3000\"/g" "${L_HOME}/config/genesis.json"
 
   # Set unbonding time to 60s for testing (tx_runner bonds & unbonds tokens in test txs)
   sed -i "s/\"unbonding_time\": \"1814400s\"/\"unbonding_time\": \"60s\"/g" "${L_HOME}/config/genesis.json"
