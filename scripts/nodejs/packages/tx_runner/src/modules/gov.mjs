@@ -134,7 +134,7 @@ export class Gov {
 
         const proposal = `${config.dirs.generated}/assets/tx_runner/upgrade_proposal.json`
 
-        const {stdout} = await execa`${process.env.UND_BIN} tx gov submit-proposal ${proposal} --from ${fromWallet.meta.wallet_json.account} --node ${config.networks.fund.rpcs[0].rpc} --output json --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund --chain-id ${config.networks.fund.chain_id} --keyring-backend test --yes --home ${config.dirs.wallets.tmp}`;
+        const {stdout} = await execa`${config.bins.und} tx gov submit-proposal ${proposal} --from ${fromWallet.meta.wallet_json.account} --node ${config.networks.fund.rpcs[0].rpc} --output json --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund --chain-id ${config.networks.fund.chain_id} --keyring-backend test --yes --home ${config.dirs.wallets.tmp}`;
 
         const res = JSON.parse(stdout);
 

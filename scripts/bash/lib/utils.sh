@@ -67,6 +67,7 @@ function generate_network_overview() {
 
   echo "{" > "${L_NET_OVERVIEW_FILE_TMP}"
   echo "  \"genesis_version\": \"${CONF_UND_GENESIS_VER}\"," >> "${L_NET_OVERVIEW_FILE_TMP}"
+  echo "  \"und_bin\": \"${UND_BIN}\"," >> "${L_NET_OVERVIEW_FILE_TMP}"
   echo "  \"upgrade_version\": \"${CONF_UND_UPGRADE_BRANCH}\"," >> "${L_NET_OVERVIEW_FILE_TMP}"
   echo "  \"fund_chain_id\": \"${CONF_CHAIN_ID}\"," >> "${L_NET_OVERVIEW_FILE_TMP}"
   echo "  \"gaiad_chain_id\": \"${CONF_IBC_CHAIN_ID}\"," >> "${L_NET_OVERVIEW_FILE_TMP}"

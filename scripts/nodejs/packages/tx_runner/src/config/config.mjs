@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from "path"
-import {generatedDir as sharedGeneratedDir} from "@simulator/shared";
+import {generatedDir as sharedGeneratedDir, repoRoot} from "@simulator/shared";
 
 export class Configuration {
     #config = {}
@@ -8,7 +8,7 @@ export class Configuration {
     constructor() {
 
         const generatedDir = sharedGeneratedDir()
-        const rootDir = path.resolve(generatedDir, "..")
+        const rootDir = repoRoot
         const netOverviewPath = path.resolve(generatedDir, "network", "overview.json")
         const netOverviewContents = fs.readFileSync(netOverviewPath, 'utf8')
         const netOverview = JSON.parse(netOverviewContents)
@@ -19,6 +19,14 @@ export class Configuration {
         const tmpWalletsDir = path.resolve(walletsDir, "tmp")
 
         const thirdPartyBinDir = path.resolve(rootDir, "third_party", "bin")
+
+        // und CLI used to submit the upgrade proposal: UND_BIN if set (a relative path is from the repo root), otherwise
+        // the genesis und that make gen used, as recorded in overview.json. Checked here because a missing binary would
+        // otherwise mean no proposal and a silent no-upgrade.
+        const undBin = process.env.UND_BIN ? path.resolve(rootDir, process.env.UND_BIN) : netOverview.und_bin
+        if (!fs.existsSync(undBin)) {
+            throw new Error(`und binary not found at ${undBin} - run make gen, or set UND_BIN in packages/tx_runner/.env`)
+        }
 
         const fund = {
             chain: {
@@ -86,6 +94,9 @@ export class Configuration {
             networks: {
                 fund,
                 gaiad,
+            },
+            bins: {
+                und: undBin,
             },
             net_overview: netOverview,
         }
