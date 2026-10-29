@@ -92,6 +92,26 @@ make build-nc
 
 ## 4. Running
 
+### 4.0. One-command rehearsal (recommended)
+
+```bash
+make sim
+```
+
+`make sim` regenerates the network from `config.json`, rebuilds the images, starts the `tx_runner` in the background
+(it submits the upgrade proposal, then drives transactions; its log is `out/tx_runner.log`), brings the network up and
+attaches the monitor. Quit the monitor with `q`, then stop everything, including the background `tx_runner`, with:
+
+```bash
+make down
+```
+
+> **`make up` on its own does not perform the upgrade.** The upgrade proposal is submitted by the `tx_runner`
+> (`make tx`). Without it the chain keeps producing blocks past `upgrade_height` and never upgrades. Use `make sim`,
+> or run `make tx` alongside `make up`.
+
+The sections below run the pieces individually.
+
 ### 4.1. Monitoring
 
 A simple monitoring script can optionally be run while the network is up, which will output some stats. Before bringing
@@ -110,7 +130,7 @@ Each package also reads an optional `.env` file in its own directory (`scripts/n
 | Variable        | Package     | Default                                       | Purpose                                                                                     |
 |-----------------|-------------|-----------------------------------------------|---------------------------------------------------------------------------------------------|
 | `GENERATED_DIR` | both        | the repo's `generated/` directory             | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
-| `UND_BIN`       | `tx_runner` | none - required to submit governance proposals | Path to an `und` binary used for proposal submission, e.g. `third_party/bin/und_<version>`. |
+| `UND_BIN`       | `tx_runner` | `third_party/bin/und_<genesis version>`       | The `und` binary used to submit the upgrade proposal (`make gen` downloads the default).   |
 | `LOG_LEVEL`     | `tx_runner` | `info`                                        | Log verbosity.                                                                              |
 
 The monitor script can be run with the `mon` make target:
@@ -133,7 +153,8 @@ make tx
 
 ### 4.3. Run the network
 
-The network can be brought up by running:
+The network can be brought up by running the following. Remember that `make up` alone does not upgrade the network -
+the `tx_runner` (4.2) must be running too, or use `make sim` (4.0).
 
 ```bash
 make up
