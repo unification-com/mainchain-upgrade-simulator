@@ -15,6 +15,15 @@ ENV PACKAGES="git make gcc libc-dev jq curl wget bash gcc"
 RUN apk update && apk add --no-cache ${PACKAGES} --upgrade grep --upgrade sed
 
 #############################################################
+# golang:1.26-alpine container — required for vaxildan and later
+# (mainchain go.mod requires Go 1.26.5+ since Cosmos SDK v0.54.4)
+
+FROM golang:1.26-alpine AS golang1_26-base
+WORKDIR /root
+ENV PACKAGES="git make gcc libc-dev jq curl wget bash gcc"
+RUN apk update && apk add --no-cache ${PACKAGES} --upgrade grep --upgrade sed
+
+#############################################################
 # cosmovisor builder container
 
 FROM golang1_21-base AS und-cosmovisor
@@ -42,9 +51,10 @@ RUN mkdir -p /usr/local/bin && \
     mv /usr/local/bin/und /usr/local/bin/und
 
 #############################################################
-# und upgrade builder container
+# und upgrade builder container — uses Go 1.26 because vaxildan-era
+# mainchain go.mod requires Go 1.26.5+.
 
-FROM golang1_23-base AS und-builder
+FROM golang1_26-base AS und-builder
 
 ARG UND_UPGRADE_BRANCH
 

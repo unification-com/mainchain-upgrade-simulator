@@ -1,6 +1,7 @@
 
 import {Logger} from "../libs/logger.mjs";
 import util from "util";
+import {TxRaw} from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
 export class TxFactory {
 
@@ -9,6 +10,7 @@ export class TxFactory {
         const signer = wallet.meta.wallet_json.address_bech32
         let actualFee = fee
         let txHash = null
+        let usedSequence = null
 
         try {
             if(!fee) {
@@ -17,7 +19,12 @@ export class TxFactory {
                 actualFee = wallet.calculateFee(gasEstimate)
             }
 
-            txHash = await wallet.signingClient.signAndBroadcastSync(signer, msgs, actualFee, memo);
+            // Sign with the locally tracked sequence rather than letting cosmjs re-read it from
+            // committed state — see Wallet's signer-data comment for why that races.
+            const signerData = await wallet.signerData()
+            usedSequence = signerData.sequence
+            const txRaw = await wallet.signingClient.sign(signer, msgs, actualFee, memo, signerData)
+            txHash = await wallet.signingClient.broadcastTxSync(TxRaw.encode(txRaw).finish())
 
             Logger.info(
                 "SEND_TX",
@@ -32,6 +39,11 @@ export class TxFactory {
 
         } catch (e) {
             Logger.error("SEND_TX", `net=${wallet.meta.network.name}`, e.toString())
+            // A rejected broadcast never entered the mempool, so hand its reserved sequence back
+            // rather than leaving a gap that would invalidate every subsequent tx.
+            if (usedSequence !== null) {
+                wallet.releaseSequence(usedSequence)
+            }
         }
 
         return txHash
