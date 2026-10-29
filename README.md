@@ -51,6 +51,19 @@ Most other configuration values can be left as their defaults.
 
 ## 2. Generate the network
 
+`make gen` first validates `config.json` against `schema/config.schema.json` and stops, before anything is generated,
+if a field is misspelt, missing or out of range. The validator is part of the Node workspace, so install that once
+(Node 22, the same install used by the monitor and tx runner in section 4):
+
+```bash
+cd scripts/nodejs
+nvm use
+yarn install
+```
+
+To check a config on its own: `yarn --cwd scripts/nodejs workspace @simulator/config validate [path/to/config.json]`
+(defaults to `config.json`; a relative path is taken from the repo root).
+
 Once configured, the network can be generated. This will generate all the necessary genesis, scripts, wallets and node
 config files etc. required. Run:
 
