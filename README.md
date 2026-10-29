@@ -35,9 +35,10 @@ The suite expects to find a `config.json`. The `example.config.json` file can be
 The `apps` object is used to define the upgrade parameters, such as the version to upgrade from and to:
 
 - `apps.und.genesis.version` - the `und` version which will be used as the genesis version to upgrade **from**.
-- `apps.und.upgrade.branch` - the `und` version which the network will upgrade **to**. This is a Git branch
+- `apps.und.upgrade.branch` - the `und` version which the network will upgrade **to**. This is a Git branch or tag of
+  `mainchain`; the Go version used to build it is read from that ref's `go.mod` when the network is generated
 - `apps.und.upgrade.upgrade_height` - the height at which the upgrade will take place
-- `apps.und.upgrade.upgrade_plan_name` - the upgradr plan name. This must match the plan in the actual upgrade branch
+- `apps.und.upgrade.upgrade_plan_name` - the upgrade plan name. This must match the plan in the actual upgrade branch
 - `apps.ibc.version` - the version of `ibc-go` to use for the IBC network.
 
 Additionally, the size of the network can be configured:
