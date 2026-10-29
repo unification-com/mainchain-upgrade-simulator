@@ -73,6 +73,13 @@ CONF_UND_GENESIS_VER=$(get_conf ".apps.und.genesis.version")
 CONF_UPGRADE_HEIGHT=$(get_conf ".apps.und.upgrade.upgrade_height")
 CONF_UPGRADE_PLAN_NAME=$(get_conf ".apps.und.upgrade.upgrade_plan_name")
 CONF_UND_UPGRADE_BRANCH=$(get_conf ".apps.und.upgrade.branch")
+# Go toolchain for building the upgrade binary: the go directive in the target ref's go.mod as a major.minor golang
+# image tag (go 1.26.5 -> golang:1.26-alpine). Read at gen time, so an SDK Go-floor bump needs no Dockerfile edit.
+CONF_UND_UPGRADE_GO_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/unification-com/mainchain/${CONF_UND_UPGRADE_BRANCH}/go.mod" | awk '$1 == "go" {split($2, v, "."); print v[1] "." v[2]; exit}')
+if [ -z "${CONF_UND_UPGRADE_GO_VERSION}" ]; then
+  echo "cannot read the go version from mainchain ${CONF_UND_UPGRADE_BRANCH}/go.mod - does that branch or tag exist?"
+  exit 1
+fi
 CONF_NUM_VALIDATORS=$(get_conf ".apps.und.nodes.num_validators")
 CONF_NUM_SENTRIES=$(get_conf ".apps.und.nodes.num_sentries")
 CONF_NUM_SEEDS=$(get_conf ".apps.und.nodes.num_seeds")

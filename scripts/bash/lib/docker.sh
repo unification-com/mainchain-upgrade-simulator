@@ -69,9 +69,8 @@ function generate_docker_compose_fund_nodes() {
         NODE_NAME: "${L_NODE_NAME}"
         UPGRADE_PLAN_NAME: "${CONF_UPGRADE_PLAN_NAME}"
         UND_GENESIS_VER: "${CONF_UND_GENESIS_VER}"
-        IBC_VER: "${CONF_IBC_VER}"
         UND_UPGRADE_BRANCH: "${CONF_UND_UPGRADE_BRANCH}"
-        V_PREFIX: "v"
+        GO_VERSION: "${CONF_UND_UPGRADE_GO_VERSION}"
         COSMOVISOR_VER: "${CONF_COSMOVISOR_VER}"
     container_name: ${CONF_GLOBAL_DOCKER_CONTAINER_PREFIX}fund_${L_NODE_NAME}
     environment:
