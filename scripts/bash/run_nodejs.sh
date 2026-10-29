@@ -17,7 +17,8 @@ esac
 
 NVM_SH="${HOME}/.nvm/nvm.sh"
 
-cd scripts/nodejs/"${TARGET_SCRIPT}"
+# monitor and tx_runner are packages in one yarn workspace - see scripts/nodejs/package.json
+cd scripts/nodejs
 
 if test -f "$NVM_SH"; then
   echo "Found ${NVM_SH}"
@@ -25,4 +26,4 @@ if test -f "$NVM_SH"; then
   nvm use
 fi
 
-yarn start
+yarn workspace "${TARGET_SCRIPT}" start

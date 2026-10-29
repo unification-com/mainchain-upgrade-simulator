@@ -1,7 +1,7 @@
 {
-  "name": "mainchain-upgrade-simulator",
+  "name": "tx_runner",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "private": true,
   "repository": "git@github.com:unification-com/mainchain-upgrade-simulator.git",
   "author": "Codegnosis <paul@codegnosis.co.uk>",
   "license": "MIT",
@@ -15,16 +15,17 @@
     "@cosmjs/proto-signing": "^0.33.1",
     "@cosmjs/stargate": "^0.33.1",
     "@noble/hashes": "^1.7.2",
+    "@simulator/shared": "1.0.0",
     "@unification-com/fundjs": "^0.1.0",
     "chain-registry": "^1.69.169",
     "cosmjs-utils": "^0.1.0",
     "dotenv": "^16.4.7",
     "execa": "^9.5.2",
     "fs-extra": "^11.3.0",
+    "fundjs2": "npm:@unification-com/fundjs@0.2.1",
     "node-fetch": "^3.3.2",
     "npmlog": "^7.0.1",
     "reconnecting-websocket": "^4.4.0",
-    "ws": "^8.18.1",
-    "fundjs2": "npm:@unification-com/fundjs@0.2.1"
+    "ws": "^8.18.1"
   }
 }

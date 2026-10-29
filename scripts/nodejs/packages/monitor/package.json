@@ -1,13 +1,14 @@
 {
   "name": "monitor",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
   "license": "MIT",
   "scripts": {
     "start": "node src/index.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^1.7.2",
+    "@simulator/shared": "1.0.0",
     "cli-cursor": "^5.0.0",
     "console-log-colors": "^0.5.0",
     "console-table-printer": "^2.12.1",

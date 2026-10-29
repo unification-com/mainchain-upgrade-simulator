@@ -81,13 +81,23 @@ make build-nc
 ### 4.1. Monitoring
 
 A simple monitoring script can optionally be run while the network is up, which will output some stats. Before bringing
-the composition up, in a separate terminal, first install the dependencies:
+the composition up, in a separate terminal, first install the Node dependencies. The monitor and the `tx_runner` are
+packages in one yarn workspace, so a single install covers both:
 
 ```bash
-cd scripts/nodejs/monitor
+cd scripts/nodejs
 nvm use
 yarn install
 ```
+
+Each package also reads an optional `.env` file in its own directory (`scripts/nodejs/packages/monitor/.env`,
+`scripts/nodejs/packages/tx_runner/.env`):
+
+| Variable        | Package     | Default                                       | Purpose                                                                                     |
+|-----------------|-------------|-----------------------------------------------|---------------------------------------------------------------------------------------------|
+| `GENERATED_DIR` | both        | the repo's `generated/` directory             | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
+| `UND_BIN`       | `tx_runner` | none - required to submit governance proposals | Path to an `und` binary used for proposal submission, e.g. `third_party/bin/und_<version>`. |
+| `LOG_LEVEL`     | `tx_runner` | `info`                                        | Log verbosity.                                                                              |
 
 The monitor script can be run with the `mon` make target:
 
@@ -98,15 +108,10 @@ make mon
 ### 4.2 Run Transactions
 
 The `tx_runner` script can be used to simulate most of the main transaction types on the network (sending, staking
-streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, first install the dependencies:
+streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, install the Node dependencies as in
+4.1 if you have not already.
 
-```bash
-cd scripts/nodejs/tx_runner
-nvm use
-yarn install
-```
-
-The monitor script can be run with the `tx` make target:
+The `tx_runner` script can be run with the `tx` make target:
 
 ```bash
 make tx

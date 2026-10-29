@@ -1,16 +1,13 @@
 import fs from 'fs'
 import path from "path"
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {generatedDir as sharedGeneratedDir} from "@simulator/shared";
 
 export class Configuration {
     #config = {}
 
     constructor() {
 
-        const generatedDir = path.resolve(process.env.GENERATED_DIR)
+        const generatedDir = sharedGeneratedDir()
         const rootDir = path.resolve(generatedDir, "..")
         const netOverviewPath = path.resolve(generatedDir, "network", "overview.json")
         const netOverviewContents = fs.readFileSync(netOverviewPath, 'utf8')

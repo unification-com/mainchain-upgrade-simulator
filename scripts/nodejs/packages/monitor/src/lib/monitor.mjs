@@ -16,7 +16,8 @@ import {
     getLastHeightFromLogs,
     getTotalTxData
 } from "./docker.mjs";
-import {getNetworkInfo, rpcIsUp, sleep} from "./utils.mjs";
+import {portIsOpen, sleep} from "@simulator/shared";
+import {getNetworkInfo} from "./utils.mjs";
 
 const OPT_KEYS = {
     E: {key: "e", opt: "efund", cycle: true},
@@ -238,8 +239,8 @@ export class UpgradeMonitor {
     }
 
     async setRpcIsUp() {
-        this.#fundRpcIsIUp = await rpcIsUp(this.#queryNodes.fund.rpc_port)
-        this.#gaiadRpcIsIUp = await rpcIsUp(this.#queryNodes.gaiad.rpc_port)
+        this.#fundRpcIsIUp = await portIsOpen(this.#queryNodes.fund.rpc_port)
+        this.#gaiadRpcIsIUp = await portIsOpen(this.#queryNodes.gaiad.rpc_port)
     }
 
     async setDockerIsUp() {

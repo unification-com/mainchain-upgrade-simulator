@@ -1,7 +1,3 @@
-import {execa} from 'execa';
-
-export const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
-
 export const getNetworkInfo = (netOverview) => {
 
     const containers = {}
@@ -64,15 +60,4 @@ export const getNetworkInfo = (netOverview) => {
     }
 
     return [containers, queryNodes]
-}
-
-export const rpcIsUp = async(rpcPort) => {
-
-    try {
-        await execa`nc -z 127.0.0.1 ${rpcPort.toString()}`
-        return true
-    } catch {
-        return false
-    }
-
 }
