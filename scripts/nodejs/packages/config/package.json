@@ -1,0 +1,16 @@
+{
+  "name": "@simulator/config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/validate.mjs",
+  "scripts": {
+    "validate": "node src/cli.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@simulator/shared": "1.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

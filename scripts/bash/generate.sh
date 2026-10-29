@@ -11,6 +11,11 @@ if ! test -f "$CONFIG"; then
   exit 1
 fi
 
+# validate config.json before anything is generated
+source "${SCRIPT_LIB_DIR}/node_env.sh"
+source "${SCRIPT_LIB_DIR}/validate_config.sh"
+validate_config "${CONFIG}"
+
 function get_conf() {
   local P=${1}
   cat < "${CONFIG}" | jq -r "${P}"

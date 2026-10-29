@@ -15,15 +15,9 @@ case "$RUN_WHAT" in
     TARGET_SCRIPT="monitor" ;;
 esac
 
-NVM_SH="${HOME}/.nvm/nvm.sh"
-
 # monitor and tx_runner are packages in one yarn workspace - see scripts/nodejs/package.json
+source scripts/bash/lib/node_env.sh
 cd scripts/nodejs
-
-if test -f "$NVM_SH"; then
-  echo "Found ${NVM_SH}"
-  source "${NVM_SH}"
-  nvm use
-fi
+use_workspace_node .
 
 yarn workspace "${TARGET_SCRIPT}" start
