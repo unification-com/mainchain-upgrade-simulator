@@ -2,7 +2,7 @@ import 'dotenv/config'
 
 import {Runner} from "./runner/runner.mjs";
 import {Configuration} from "./config/config.mjs";
-import {sleep} from "./libs/utils.mjs";
+import {sleep} from "@simulator/shared";
 import {Logger} from './libs/logger.mjs'
 
 // The node goes away for ~15s at the upgrade height while cosmovisor swaps the binary. Any query

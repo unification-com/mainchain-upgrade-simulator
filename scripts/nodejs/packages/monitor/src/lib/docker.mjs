@@ -1,10 +1,4 @@
-import path from "path"
-import { fileURLToPath } from 'url';
 import {execa} from 'execa';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..", "..", "..", "..", "..")
 
 const stripFormattingRegEx = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
 

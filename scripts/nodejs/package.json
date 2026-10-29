@@ -1,0 +1,10 @@
+{
+  "name": "mainchain-upgrade-simulator-nodejs",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -7,7 +7,8 @@ import {
     getRandomWalletNotThis
 } from "../libs/wallet_utils.mjs";
 import {RpcQueryClient} from "../queryClient/client.mjs";
-import {isIdxOdd, portIsOpen, sleep} from "../libs/utils.mjs";
+import {portIsOpen, sleep} from "@simulator/shared";
+import {isIdxOdd} from "../libs/utils.mjs";
 import { TxFactory} from "../tx/tx_factory.mjs";
 import {Logger} from '../libs/logger.mjs'
 import {Gov} from "../modules/gov.mjs";
