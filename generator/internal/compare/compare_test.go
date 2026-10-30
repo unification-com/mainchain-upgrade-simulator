@@ -97,3 +97,17 @@ func TestReorderedArraysAreNotADifference(t *testing.T) {
 		t.Fatalf("want no differences, got %+v", res)
 	}
 }
+
+// docker-compose.yml is compared by content: layout and key order are not differences, values are.
+func TestYAMLIsComparedStructurally(t *testing.T) {
+	a := tree(t, map[string]string{"c.yml": "services:\n  n1:\n    ports: [\"1:1\"]\n    image: x\n"})
+	b := tree(t, map[string]string{"c.yml": "services:\n    n1:\n        image: x\n        ports:\n            - \"1:1\"\n"})
+	if res, err := Trees(a, b, 10, nil); err != nil || !res.Empty() {
+		t.Fatalf("want no differences, got %+v %v", res, err)
+	}
+	c := tree(t, map[string]string{"c.yml": "services:\n  n1:\n    ports: [\"2:2\"]\n    image: x\n"})
+	res, err := Trees(a, c, 10, nil)
+	if err != nil || len(res.Diffs["c.yml"]) != 1 || !strings.Contains(res.Diffs["c.yml"][0], "/services/n1/ports") {
+		t.Fatalf("want one ports difference, got %+v %v", res.Diffs, err)
+	}
+}

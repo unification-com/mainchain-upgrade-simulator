@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // random tokens: a 24-word mnemonic, a Cosmos bech32 address, a 40-hex-digit ID or address, a long base64 key or
@@ -113,12 +115,21 @@ func files(root string, skip []string) ([]string, error) {
 	return out, err
 }
 
-func decodeJSON(raw []byte) (any, error) {
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
+// decodeStructured parses JSON and YAML files so they are compared by content, not layout.
+func decodeStructured(rel string, raw []byte) (any, bool) {
 	var v any
-	err := dec.Decode(&v)
-	return v, err
+	var err error
+	switch filepath.Ext(rel) {
+	case ".json":
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		err = dec.Decode(&v)
+	case ".yml", ".yaml":
+		err = yaml.Unmarshal(raw, &v)
+	default:
+		return nil, false
+	}
+	return v, err == nil
 }
 
 // stakeAmounts collects the self-delegation amounts from every gentx in the tree's genesis files - random per run.
@@ -191,11 +202,9 @@ func load(root string, skip []string) (map[string]normalised, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if strings.HasSuffix(rel, ".json") {
-			if v, err := decodeJSON(raw); err == nil {
-				out[rel] = normalised{json: m.maskJSON(v, rel+"#")}
-				continue
-			}
+		if v, ok := decodeStructured(rel, raw); ok {
+			out[rel] = normalised{json: m.maskJSON(v, rel+"#")}
+			continue
 		}
 		lines := strings.Split(string(raw), "\n")
 		for i, l := range lines {

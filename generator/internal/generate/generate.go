@@ -20,15 +20,16 @@ import (
 
 // side is one chain: the FUND chain under test, or the Gaia chain on the other end of IBC.
 type side struct {
-	bin         chain.Binary
-	chainID     string
-	denom       string
-	minGasPrice string
-	home        string // the throwaway home that builds the genesis and holds every key
-	wallets     string // wallet files
-	nodes       string // node homes, copied into the images
-	network     string // node descriptors
-	all         []network.Node
+	bin             chain.Binary
+	chainID         string
+	denom           string
+	minGasPrice     string
+	containerPrefix string // a node's container is <containerPrefix>_<node name>
+	home            string // the throwaway home that builds the genesis and holds every key
+	wallets         string // wallet files
+	nodes           string // node homes, copied into the images
+	network         string // node descriptors
+	all             []network.Node
 }
 
 func (s *side) genesisFile() string { return filepath.Join(s.home, "config", "genesis.json") }
@@ -43,20 +44,25 @@ func (s *side) node(name string) (network.Node, error) {
 }
 
 type generator struct {
-	cfg       *config.Config
-	p         paths.Paths
-	fund, ibc *side
-	alloc     *network.Allocator
-	rng       *rand.Rand
+	cfg              *config.Config
+	p                paths.Paths
+	fund, ibc        *side
+	alloc            *network.Allocator
+	rng              *rand.Rand
+	upgradeGoVersion string // golang image tag that builds the upgrade binary
+	hermesMnemonic   string // the relayer's account, on both chains
+	hermesIP         string
 }
 
-// Run generates the network into p.Generated.
-func Run(p paths.Paths, cfg *config.Config) error {
+// Run generates the network into p.Generated and p.DockerCompose. upgradeGoVersion is the golang image tag that builds
+// the upgrade binary.
+func Run(p paths.Paths, cfg *config.Config, upgradeGoVersion string) error {
+	prefix := cfg.Docker.ContainerPrefix
 	g := &generator{
-		cfg: cfg, p: p,
-		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund", minGasPrice: "25.0nund",
+		cfg: cfg, p: p, upgradeGoVersion: upgradeGoVersion,
+		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund", minGasPrice: "25.0nund", containerPrefix: prefix + "fund",
 			home: p.TmpGlobalUndHome, wallets: p.WalletsUnd, nodes: p.NodesFund, network: p.NetworkUnd},
-		ibc: &side{bin: chain.Binary{Path: thirdparty.GaiadBin(p, cfg)}, chainID: cfg.Apps.IBC.ChainID, denom: "stake", minGasPrice: "0stake",
+		ibc: &side{bin: chain.Binary{Path: thirdparty.GaiadBin(p, cfg)}, chainID: cfg.Apps.IBC.ChainID, denom: "stake", minGasPrice: "0stake", containerPrefix: prefix + "ibc_gaiad",
 			home: p.TmpGlobalGaiadHome, wallets: p.WalletsGaiad, nodes: p.NodesGaiad, network: p.NetworkGaiad},
 		alloc: network.NewAllocator(cfg.Docker.Network),
 		rng:   rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())),
@@ -73,6 +79,8 @@ func Run(p paths.Paths, cfg *config.Config) error {
 		{"configure the nodes", g.configureNodes},
 		{"configure Hermes", g.configureHermes},
 		{"write the upgrade proposal", g.writeProposal},
+		{"write docker-compose.yml", g.writeCompose},
+		{"write the network overview", g.writeOverview},
 		{"remove the throwaway genesis homes", func() error { return os.RemoveAll(p.Tmp) }},
 	} {
 		fmt.Println(step.name)
@@ -128,17 +136,17 @@ func (g *generator) newAccounts(s *side, prefix, walletType string, n int) error
 
 // sharedAccount creates an account on the FUND chain and the same mnemonic's account on the IBC chain - for the IBC
 // test accounts and the relayer, which need funds on both ends.
-func (g *generator) sharedAccount(name, walletType string) error {
+func (g *generator) sharedAccount(name, walletType string) (wallet.Wallet, error) {
 	w, err := g.newAccount(g.fund, name, walletType)
 	if err != nil {
-		return err
+		return w, err
 	}
 	key, err := g.ibc.bin.RecoverKey(g.ibc.home, name, w.Mnemonic)
 	if err != nil {
-		return err
+		return w, err
 	}
 	_, err = g.fundAccount(g.ibc, key, walletType)
-	return err
+	return w, err
 }
 
 func (g *generator) createAccounts() error {
@@ -176,13 +184,15 @@ func (g *generator) createAccounts() error {
 	}
 
 	for i := 1; i <= g.cfg.Apps.IBC.Accounts.NumIBCAccounts; i++ {
-		if err := g.sharedAccount(fmt.Sprintf("ibc%d", i), "ibc"); err != nil {
+		if _, err := g.sharedAccount(fmt.Sprintf("ibc%d", i), "ibc"); err != nil {
 			return err
 		}
 	}
-	if err := g.sharedAccount("hermes1", "hermes"); err != nil {
+	hermes, err := g.sharedAccount("hermes1", "hermes")
+	if err != nil {
 		return err
 	}
+	g.hermesMnemonic = hermes.Mnemonic
 
 	for _, a := range acc.Static {
 		if err := g.fund.bin.AddGenesisAccount(g.fund.home, a.Address, a.Nund+"nund"); err != nil {
