@@ -37,8 +37,12 @@ function config_fund_genesis() {
   sed -i "s/\"default_storage_limit\": \"50000\"/\"default_storage_limit\": \"2000\"/g" "${L_HOME}/config/genesis.json"
   sed -i "s/\"max_storage_limit\": \"600000\"/\"max_storage_limit\": \"3000\"/g" "${L_HOME}/config/genesis.json"
 
-  # Set unbonding time to 60s for testing (tx_runner bonds & unbonds tokens in test txs)
-  sed -i "s/\"unbonding_time\": \"1814400s\"/\"unbonding_time\": \"60s\"/g" "${L_HOME}/config/genesis.json"
+  # Unbonding time caps Hermes's IBC client trusting_period (templates/configs/hermes_config.toml), and an upgrade
+  # halt longer than that period expires the client and stops relaying. 30m allows a 20m trusting period - enough for
+  # the ~16 minute halt of a large-state rehearsal. The tx_runner undelegates often, so max_entries rises with it:
+  # the default 7 unbonding entries per delegator/validator pair would fill up long before 30m entries mature.
+  sed -i "s/\"unbonding_time\": \"1814400s\"/\"unbonding_time\": \"1800s\"/g" "${L_HOME}/config/genesis.json"
+  sed -i "s/\"max_entries\": 7/\"max_entries\": 100/g" "${L_HOME}/config/genesis.json"
 #  if [ "$GENESIS_TIME" != "null" ]; then
 #    sed -i "s/\"genesis_time\": \".*\"/\"genesis_time\": \"${GENESIS_TIME}\"/g" "${L_HOME}/config/genesis.json"
 #  fi

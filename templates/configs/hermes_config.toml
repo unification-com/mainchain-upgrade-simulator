@@ -59,12 +59,11 @@ max_msg_num = 30
 max_tx_size = 2097152
 clock_drift = '5s'
 max_block_time = '30s'
-# MUST be smaller than the staking unbonding_time (which is '60s' in
-# this devnet's genesis, set in scripts/bash/lib/net_init.sh). Set to
-# '40s' to maximise headroom for upgrade halts within that constraint.
-# A longer halt expires the client; allowing one needs a longer genesis
-# unbonding_time first.
-trusting_period = '40s'
+# MUST be smaller than the staking unbonding_time (30m in this devnet's
+# genesis, set in scripts/bash/lib/net_init.sh). An upgrade halt longer
+# than this expires the client and relaying stops, so it is set as high
+# as that allows (Hermes's usual 2/3 of unbonding).
+trusting_period = '20m'
 trust_threshold = { numerator = '2', denominator = '3' }
 
 [chains.event_source]
