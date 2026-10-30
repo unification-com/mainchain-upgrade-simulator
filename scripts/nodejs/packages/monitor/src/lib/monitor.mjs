@@ -4,8 +4,6 @@ import { sha256 } from '@noble/hashes/sha2'
 import { bytesToHex } from '@noble/hashes/utils'
 import { color, bold } from 'console-log-colors';
 import { Table }  from 'console-table-printer'
-import fs from "fs-extra";
-import path from "path";
 import readline from 'node:readline';
 import cliCursor from 'cli-cursor';
 
@@ -89,8 +87,6 @@ export class UpgradeMonitor {
     #streamSenderReceiverPairs = []
     #paymentStreams = []
 
-    #streamSender = null
-    #streamReceiver = null
 
     #numReggedBeacons = 0
     #numReggedWrkchains = 0
@@ -157,21 +153,6 @@ export class UpgradeMonitor {
 
         this.#displayOption = OPT_KEYS.O.key
 
-        const walletsDir = path.resolve(this.#netOverview.wallets_dir)
-        const srcDir = path.resolve(walletsDir, "und")
-        const walletFiles = await fs.readdir(srcDir)
-        for(let i = 0; i < walletFiles.length; i++) {
-            const walletFile = walletFiles[i]
-            const w = await fs.readFile(path.resolve(srcDir, walletFile))
-            const wJson = JSON.parse(w)
-            if(wJson.account === "stream_sender1") {
-                this.#streamSender = wJson.address_bech32
-            }
-            if(wJson.account === "stream_receiver1") {
-                this.#streamReceiver = wJson.address_bech32
-            }
-        }
-
         // check docker composition is up
         while (!this.#dockerIsUp) {
             this.printWaitForDocker()
@@ -191,8 +172,12 @@ export class UpgradeMonitor {
 
         const runRefreshAndPrint = this.refreshAndPrint.bind(this)
 
+        // a failed refresh (e.g. a container being removed under it by `make down`) skips one update rather than
+        // crashing the monitor with an unhandled rejection
         setInterval(async function () {
-            await runRefreshAndPrint()
+            try {
+                await runRefreshAndPrint()
+            } catch (e) {}
         }, 1000);
 
         const runCycleOptions = this.cycleOptions.bind(this)
@@ -212,13 +197,13 @@ export class UpgradeMonitor {
 
     async refreshAndPrint() {
         await this.getHermesStatus()
+        await this.fetchFundtotalSupply()
         await this.fetchFundOnIbcSupply()
         await this.getIbcChannels()
         await this.setRpcIsUp()
         await this.processDockerLogs()
         await this.getUpgradeProposalStatus()
         await this.fetchPaymentStreams()
-        await this.monitorPaymentStream()
         await this.fetchNumReggedBeacons()
         await this.fetchNumReggedWrkchains()
         await this.fetchEfundPurchaseOrders()
@@ -569,22 +554,25 @@ export class UpgradeMonitor {
         // }
     }
 
+    // Every stream on chain, from the list route - the same before and after the upgrade, whereas the single-stream
+    // route gained a {denom} segment in vaxildan (and 501s in the old shape). Pairs are remembered once seen, so a
+    // cancelled stream still shows as Cancelled.
     async fetchPaymentStreams() {
 
         try {
-            const response = await fetch(`${this.#queryNodes.fund.rest}/mainchain/stream/v1/streams/all`);
+            const response = await fetch(`${this.#queryNodes.fund.rest}/mainchain/stream/v1/streams/all?pagination.limit=1000`);
             const data = await response.json();
 
-            if(data?.streams.length > 0) {
-                for(let i = 0; i < data.streams.length; i++) {
-                    const s = data.streams[i];
-                    const pair = `${s.sender}_${s.receiver}`
-                    if(!this.#streamSenderReceiverPairs.includes(pair)) {
-                        this.#streamSenderReceiverPairs.push(pair)
-                    }
+            const current = new Map()
+            for (const s of data?.streams ?? []) {
+                const pair = `${s.sender}_${s.receiver}_${s.stream?.deposit?.denom}`
+                current.set(pair, s)
+                if (!this.#streamSenderReceiverPairs.includes(pair)) {
+                    this.#streamSenderReceiverPairs.push(pair)
                 }
             }
-
+            this.#paymentStreams = this.#streamSenderReceiverPairs.map((pair) => current.get(pair) ?? ERRS.NOT_EXIST)
+            this.#numActiveStreams = current.size
 
         } catch (e) {}
     }
@@ -617,35 +605,6 @@ export class UpgradeMonitor {
 
 
         } catch (e) {}
-    }
-
-    async getSinglePaymentStream(sender, receiver) {
-        let stream = null
-        try {
-            const response = await fetch(`${this.#queryNodes.fund.rest}/mainchain/stream/v1/streams/receiver/${sender}/${receiver}`);
-            const data = await response.json();
-
-            if (data?.message !== undefined || data?.stream.stream === undefined) {
-                return ERRS.NOT_EXIST
-            }
-
-            this.#numActiveStreams += 1
-            return data.stream
-        } catch(e) {
-            return ERRS.NOT_EXIST
-        }
-    }
-
-    async monitorPaymentStream() {
-        this.#paymentStreams = []
-        this.#numActiveStreams = 0
-        for(let i = 0; i < this.#streamSenderReceiverPairs.length; i += 1) {
-            const pair = this.#streamSenderReceiverPairs[i].split("_");
-            const s = await this.getSinglePaymentStream(pair[1], pair[0])
-
-            this.#paymentStreams.push(s)
-        }
-
     }
 
     printStats() {
