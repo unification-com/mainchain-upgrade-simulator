@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/config"
+	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/generate"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/paths"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/thirdparty"
 )
@@ -50,7 +51,10 @@ func run(root, configPath string) error {
 	if err := thirdparty.EnsureBinaries(p, cfg); err != nil {
 		return err
 	}
+	if err := generate.Run(p, cfg); err != nil {
+		return err
+	}
 
-	fmt.Println("go generator: ported up to the third-party binaries - genesis, nodes and docker-compose.yml still come from make gen")
+	fmt.Println("go generator: ported up to the genesis files and node homes - node configs, Hermes and docker-compose.yml still come from make gen")
 	return nil
 }
