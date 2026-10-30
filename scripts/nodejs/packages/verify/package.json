@@ -1,0 +1,14 @@
+{
+  "name": "verify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-of-run PASS/FAIL checks against a running simulator network",
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
+  "dependencies": {
+    "@simulator/shared": "1.0.0",
+    "console-log-colors": "^0.5.0"
+  }
+}

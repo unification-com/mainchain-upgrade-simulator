@@ -1,23 +1,9 @@
 import {execa} from 'execa';
+import {composeContainers} from "@simulator/shared";
 
 const stripFormattingRegEx = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
 
-export const dockerComposeIsUp = async (prefix) => {
-    let numContainersUp = 0
-    const {stdout} = await execa`docker compose ps --format json`
-
-    if(stdout) {
-        const lines = stdout.split("\n")
-        for (const line of lines) {
-            const n = JSON.parse(line)
-            if(n.Name.includes(prefix)) {
-                numContainersUp += 1
-            }
-        }
-    }
-
-    return numContainersUp
-}
+export const dockerComposeIsUp = async (prefix) => (await composeContainers()).filter((c) => c.Name.includes(prefix)).length
 
 export const getDockerLogs = async (containerName, numLines) => {
 

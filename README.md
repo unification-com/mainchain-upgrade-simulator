@@ -100,7 +100,14 @@ make sim
 
 `make sim` regenerates the network from `config.json`, rebuilds the images, starts the `tx_runner` in the background
 (it submits the upgrade proposal, then drives transactions; its log is `out/tx_runner.log`), brings the network up and
-attaches the monitor. Quit the monitor with `q`, then stop everything, including the background `tx_runner`, with:
+attaches the monitor. Once the chain is well past `upgrade_height`, quit the monitor with `q` and check the run:
+
+```bash
+make verify
+```
+
+It prints a `[PASS]`/`[FAIL]` line per check and exits non-zero if any fail (see 4.6). Then stop everything,
+including the background `tx_runner`, with:
 
 ```bash
 make down
@@ -115,8 +122,8 @@ The sections below run the pieces individually.
 ### 4.1. Monitoring
 
 A simple monitoring script can optionally be run while the network is up, which will output some stats. Before bringing
-the composition up, in a separate terminal, first install the Node dependencies. The monitor and the `tx_runner` are
-packages in one yarn workspace, so a single install covers both:
+the composition up, in a separate terminal, first install the Node dependencies. The monitor, the `tx_runner` and
+`verify` are packages in one yarn workspace, so a single install covers them all:
 
 ```bash
 cd scripts/nodejs
@@ -190,6 +197,28 @@ After an upgrade has occurred, the `hermes` container will need restarting, for 
 ```bash
 docker restart t_dn_ibc_hermes
 ```
+
+### 4.6. Verify a run
+
+With the network still up and the chain at least 10 blocks past `upgrade_height`:
+
+```bash
+make verify
+```
+
+Checks, all against the running network (the plan, height and nodes come from `generated/network/overview.json`):
+
+- the upgrade plan was applied at exactly `upgrade_height`
+- the chain is at least 10 blocks past it and its latest block is under a minute old
+- every node and the Hermes container is running
+- every validator signed at least one of the last 10 blocks
+- an IBC transfer channel is open on both chains
+- at least one successful transaction per message type the `tx_runner` sends, plus Hermes's IBC packet relaying, both
+  before the upgrade and from `upgrade_height` on (the upgrade block is the first one the new binary runs) - so both
+  binaries are proven to handle every message. The upgrade proposal itself is only needed before
+
+Exit code 0 means every check passed. To add a check, add an entry to
+`scripts/nodejs/packages/verify/src/checks.mjs` - a message type is one line in `EXPECTED_MSGS`.
 
 ## 5. Example commands
 

@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from "path"
-import {generatedDir as sharedGeneratedDir, repoRoot} from "@simulator/shared";
+import {generatedDir as sharedGeneratedDir, loadOverview, repoRoot} from "@simulator/shared";
 
 export class Configuration {
     #config = {}
@@ -9,9 +9,7 @@ export class Configuration {
 
         const generatedDir = sharedGeneratedDir()
         const rootDir = repoRoot
-        const netOverviewPath = path.resolve(generatedDir, "network", "overview.json")
-        const netOverviewContents = fs.readFileSync(netOverviewPath, 'utf8')
-        const netOverview = JSON.parse(netOverviewContents)
+        const netOverview = loadOverview()
 
         const walletsDir = path.resolve(netOverview.wallets_dir)
         const fundWalletsDir = path.resolve(walletsDir, "und")

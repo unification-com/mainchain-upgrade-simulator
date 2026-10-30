@@ -11,6 +11,8 @@ case "$RUN_WHAT" in
     TARGET_SCRIPT="monitor" ;;
   "tx" | "tx_runner")
     TARGET_SCRIPT="tx_runner" ;;
+  "verify")
+    TARGET_SCRIPT="verify" ;;
   *)
     TARGET_SCRIPT="monitor" ;;
 esac
@@ -20,4 +22,4 @@ source scripts/bash/lib/node_env.sh
 cd scripts/nodejs
 use_workspace_node .
 
-yarn workspace "${TARGET_SCRIPT}" start
+yarn --silent workspace "${TARGET_SCRIPT}" run --silent start
