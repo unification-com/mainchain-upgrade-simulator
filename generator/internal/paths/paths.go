@@ -26,6 +26,7 @@ type Paths struct {
 	NodesGaiad          string // node homes copied into the Gaia images
 	Hermes              string
 	TxRunner            string
+	Tmp                 string // throwaway work, removed at the end of a run
 	TmpGlobalUndHome    string // throwaway node home that builds the FUND genesis
 	TmpGlobalGaiadHome  string // throwaway node home that builds the Gaia genesis
 	DockerLogs          string
@@ -41,7 +42,8 @@ func New(root string) Paths {
 	network := filepath.Join(generated, "network")
 	assets := filepath.Join(generated, "assets")
 	wallets := filepath.Join(assets, "wallets")
-	tmpGlobal := filepath.Join(generated, "tmp", "GLOBAL")
+	tmp := filepath.Join(generated, "tmp")
+	tmpGlobal := filepath.Join(tmp, "GLOBAL")
 	templates := filepath.Join(root, "templates")
 	thirdParty := filepath.Join(root, "third_party")
 
@@ -63,6 +65,7 @@ func New(root string) Paths {
 		NodesGaiad:          filepath.Join(assets, "gaiad_net"),
 		Hermes:              filepath.Join(assets, "hermes"),
 		TxRunner:            filepath.Join(assets, "tx_runner"),
+		Tmp:                 tmp,
 		TmpGlobalUndHome:    filepath.Join(tmpGlobal, ".und_mainchain"),
 		TmpGlobalGaiadHome:  filepath.Join(tmpGlobal, ".gaiad"),
 		DockerLogs:          filepath.Join(generated, "docker_logs"),
@@ -81,7 +84,7 @@ func (p Paths) ResetGenerated() error {
 		return err
 	}
 	for _, dir := range []string{p.NodesFund, p.WalletsUnd, p.WalletsGaiad, p.AssetsScripts, p.TxRunner,
-		p.NetworkUnd, p.NetworkGaiad, filepath.Dir(p.TmpGlobalUndHome)} {
+		p.NetworkUnd, p.NetworkGaiad, p.Tmp} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
