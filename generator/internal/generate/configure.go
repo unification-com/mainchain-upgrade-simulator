@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/network"
@@ -13,12 +12,10 @@ import (
 )
 
 // peers is a node's persistent peers and seeds: every other node of its chain, with seeds listed separately, in
-// name order (as the bash generator listed them).
+// name order.
 func peers(all []network.Node, self network.Node) (persistent, seeds string) {
-	sorted := append([]network.Node(nil), all...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	var p, s []string
-	for _, n := range sorted {
+	for _, n := range sortedByName(all) {
 		switch {
 		case n.Name == self.Name:
 		case n.Type == network.Seed:

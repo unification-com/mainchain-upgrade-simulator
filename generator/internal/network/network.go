@@ -36,7 +36,7 @@ func next(counter *int) int {
 	return v
 }
 
-func (a *Allocator) nextIP() string {
+func (a *Allocator) NextIP() string {
 	return fmt.Sprintf("%s.%d", a.subnet, next(&a.ip))
 }
 
@@ -60,7 +60,7 @@ type Node struct {
 func Create(bin chain.Binary, alloc *Allocator, homeRoot, chainID, name, nodeType string) (Node, error) {
 	n := Node{
 		Name: name, Type: nodeType, ChainID: chainID,
-		IP:      alloc.nextIP(),
+		IP:      alloc.NextIP(),
 		P2PPort: next(&alloc.p2p),
 		RPCPort: 26657, RESTPort: 1317, GRPCPort: 9090,
 		Home: filepath.Join(homeRoot, name),

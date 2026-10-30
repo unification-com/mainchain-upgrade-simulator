@@ -11,7 +11,7 @@ import (
 // the first RPC node its RPC/REST/gRPC ports from the starts, while non-RPC nodes keep the in-container defaults.
 func TestAllocationOrder(t *testing.T) {
 	a := NewAllocator(config.Network{Subnet: "172.25.1", IPStart: 2, P2PPortStart: 26660, RPCPortStart: 26760, RESTPortStart: 1320, GRPCPortStart: 9190})
-	if got := a.nextIP(); got != "172.25.1.2" {
+	if got := a.NextIP(); got != "172.25.1.2" {
 		t.Fatalf("first IP = %s", got)
 	}
 	if got := next(&a.p2p); got != 26660 {
@@ -20,7 +20,7 @@ func TestAllocationOrder(t *testing.T) {
 	if rpc, rest, grpc := next(&a.rpc), next(&a.rest), next(&a.gRPC); rpc != 26760 || rest != 1320 || grpc != 9190 {
 		t.Fatalf("first rpc ports = %d %d %d", rpc, rest, grpc)
 	}
-	if got := a.nextIP(); got != "172.25.1.3" {
+	if got := a.NextIP(); got != "172.25.1.3" {
 		t.Fatalf("second IP = %s", got)
 	}
 }

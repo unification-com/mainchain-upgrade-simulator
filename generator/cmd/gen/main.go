@@ -51,10 +51,10 @@ func run(root, configPath string) error {
 	if err := thirdparty.EnsureBinaries(p, cfg); err != nil {
 		return err
 	}
-	if err := generate.Run(p, cfg); err != nil {
+	if err := generate.Run(p, cfg, goVersion); err != nil {
 		return err
 	}
 
-	fmt.Println("go generator: ported up to the node, Hermes and proposal configs - docker-compose.yml and overview.json still come from make gen")
+	fmt.Printf("network generated: %s and %s\n", p.Generated, p.DockerCompose)
 	return nil
 }
