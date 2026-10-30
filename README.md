@@ -199,7 +199,8 @@ docker unpause t_dn_fund_sentry1
 ### 4.5 Restart Hermes
 
 Hermes normally relays straight through the upgrade without help (`make verify` checks that packets were relayed after
-it). If it has stopped relaying - for example after a long halt has expired its IBC client (see 4.7) - restart it:
+it). If it has stopped relaying while its IBC client is still valid, restart it (an expired client - see 4.7 - is not
+fixed by a restart):
 
 ```bash
 docker restart t_dn_ibc_hermes
@@ -242,10 +243,10 @@ Some log output looks like failure but is the normal shape of an upgrade:
 - **Hermes logs `ERROR`s that are harmless.** `misbehaviour checking is being disabled ... could not extract header`
   repeats throughout; WebSocket / `failed to collect events` errors appear during the halt; a `will retry` client
   error can appear at start-up before both chains are ready.
-- **Long halts can expire the IBC client.** The simulator's genesis sets a 60 s unbonding time, which caps Hermes's
-  client `trusting_period` at 40 s (`templates/configs/hermes_config.toml`). A halt longer than that (for example a
-  very large `upgrade_height` with slow node restarts) expires the client and relaying stops. Short rehearsals are
-  well inside it.
+- **Only a very long halt expires the IBC client.** Hermes's client `trusting_period` is 20 minutes
+  (`templates/configs/hermes_config.toml`), the most the genesis 30-minute unbonding time allows. A halt longer than
+  that expires the client and relaying stops for the rest of the run. Undelegated tokens take those 30 minutes to
+  return to their wallets.
 
 ## 5. Example commands
 
