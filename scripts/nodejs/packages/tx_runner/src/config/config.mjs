@@ -1,6 +1,5 @@
-import fs from 'fs'
 import path from "path"
-import {generatedDir as sharedGeneratedDir, loadOverview, repoRoot} from "@simulator/shared";
+import {generatedDir as sharedGeneratedDir, loadOverview} from "@simulator/shared";
 
 export class Configuration {
     #config = {}
@@ -8,23 +7,11 @@ export class Configuration {
     constructor() {
 
         const generatedDir = sharedGeneratedDir()
-        const rootDir = repoRoot
         const netOverview = loadOverview()
 
         const walletsDir = path.resolve(netOverview.wallets_dir)
         const fundWalletsDir = path.resolve(walletsDir, "und")
         const gaiadWalletsDir = path.resolve(walletsDir, "gaiad")
-        const tmpWalletsDir = path.resolve(walletsDir, "tmp")
-
-        const thirdPartyBinDir = path.resolve(rootDir, "third_party", "bin")
-
-        // und CLI used to submit the upgrade proposal: UND_BIN if set (a relative path is from the repo root), otherwise
-        // the genesis und that make gen used, as recorded in overview.json. Checked here because a missing binary would
-        // otherwise mean no proposal and a silent no-upgrade.
-        const undBin = process.env.UND_BIN ? path.resolve(rootDir, process.env.UND_BIN) : netOverview.und_bin
-        if (!fs.existsSync(undBin)) {
-            throw new Error(`und binary not found at ${undBin} - run make gen, or set UND_BIN in packages/tx_runner/.env`)
-        }
 
         const fund = {
             chain: {
@@ -57,6 +44,7 @@ export class Configuration {
                     rpc_port: node.rpc_port,
                     grpc_port: node.grpc_port,
                     rest_port: node.rest_port,
+                    container: node.docker_container,
                 })
             }
         }
@@ -79,22 +67,16 @@ export class Configuration {
 
         this.#config = {
             dirs: {
-                root: rootDir,
                 generated: generatedDir,
-                thirdPartyBin: thirdPartyBinDir,
                 wallets: {
                     root: walletsDir,
                     fund: fundWalletsDir,
                     gaiad: gaiadWalletsDir,
-                    tmp: tmpWalletsDir,
                 },
             },
             networks: {
                 fund,
                 gaiad,
-            },
-            bins: {
-                und: undBin,
             },
             net_overview: netOverview,
         }

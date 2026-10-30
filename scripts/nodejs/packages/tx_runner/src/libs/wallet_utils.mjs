@@ -25,22 +25,6 @@ export const createWallets = async (config, network) => {
     return wallets
 }
 
-export const createTmpLocalWallet = async (wallet, tmpDir) => {
-
-    const krBackend = path.resolve(tmpDir, "keyring-test")
-    await fs.mkdirs(krBackend)
-    const c = wallet.meta.wallet_json.key_files.contents
-    const f1 = wallet.meta.wallet_json.key_files.filename1
-    const f2 = wallet.meta.wallet_json.key_files.filename2
-
-    await fs.writeFileSync(path.resolve(krBackend, f1), c);
-    await fs.writeFileSync(path.resolve(krBackend, f2), c);
-}
-
-export const deleteTmpLocalWallets = async(tmpDir) => {
-    await fs.removeSync(tmpDir)
-}
-
 export const getRandomWallet = (wallets) => {
     const rndIdx = Math.floor(Math.random() * wallets.length);
     return wallets[rndIdx];
