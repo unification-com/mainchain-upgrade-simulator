@@ -195,11 +195,14 @@ export class Runner {
             Logger.info("=== START FUND BLOCK ACTIONS ===")
             this.#currentBlockHeight = parseInt(block?.header?.height, 10)
             Logger.info("FUND BLOCK HEIGHT", this.#currentBlockHeight)
-            // x/stream became multi-denom in vaxildan: the denom is only a valid message field once
-            // the chain has crossed the upgrade height.
-            PaymentStream.setStreamDenom(this.#currentBlockHeight, this.#upgradeHeight)
+            // Message shapes follow the binary that will execute them. A tx sent now lands in the next block at
+            // the earliest, and the upgrade height is the first block the new binary runs - so switch one block
+            // early, or txs sent while the chain halts at the upgrade carry the old shape into the new binary.
+            const nextBlockUpgraded = this.#upgradeHeight > 0 && this.#currentBlockHeight + 1 >= this.#upgradeHeight
+            // x/stream became multi-denom in vaxildan: the denom is only a valid message field post-upgrade.
+            PaymentStream.setStreamDenom(nextBlockUpgraded, this.#currentBlockHeight)
             // BEACON timestamps gain an optional `metadata` field in vaxildan (#129).
-            Beacon.setBeaconMetadata(this.#currentBlockHeight, this.#upgradeHeight)
+            Beacon.setBeaconMetadata(nextBlockUpgraded, this.#currentBlockHeight)
             await this.checkTxs("fund")
             await this.checkIbcChannels()
 

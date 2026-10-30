@@ -31,8 +31,8 @@ export class PaymentStream {
     }
 
     // Called by the runner each block so the messages match the running consensus version.
-    static setStreamDenom(currentHeight, upgradeHeight) {
-        const denom = (upgradeHeight > 0 && currentHeight >= upgradeHeight) ? "nund" : ""
+    static setStreamDenom(upgraded, currentHeight) {
+        const denom = upgraded ? "nund" : ""
         if (denom !== PaymentStream.streamDenom) {
             Logger.info("STREAM DENOM", `switching stream msg denom to '${denom}' at height ${currentHeight}`)
             PaymentStream.streamDenom = denom
