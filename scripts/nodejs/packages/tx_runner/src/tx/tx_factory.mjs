@@ -2,6 +2,11 @@
 import {Logger} from "../libs/logger.mjs";
 import util from "util";
 import {TxRaw} from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
+import {execa} from "execa";
+
+// The und CLI inside a FUND node container: cosmovisor/current is always the binary the network is running - the
+// genesis release before the upgrade, the upgrade build after it.
+const NODE_UND = "/root/.und_mainchain/cosmovisor/current/bin/und"
 
 export class TxFactory {
 
@@ -54,6 +59,40 @@ export class TxFactory {
 
         return txHash
 
+    }
+
+    // Sends a tx through the und CLI instead of the signing client, so the CLI's own code paths (proposal files,
+    // client-side fee calculation) are exercised on the version under test - run inside the first FUND RPC node's
+    // container, so no host binary is needed. The wallet's key is recovered from its mnemonic into a throwaway keyring
+    // that lasts for the one call. `input` is fed to the tx command's stdin (e.g. a proposal file passed as
+    // /dev/stdin). Like sendTx, returns the tx hash, or null if nothing was broadcast.
+    static async sendCliTx(config, wallet, txArgs, memo, input = "") {
+        const rpc = config.networks.fund.rpcs[0]
+        const script = [
+            'set -e',
+            'home=$(mktemp -d)',
+            'trap \'rm -rf "$home"\' EXIT',
+            `echo "$MNEMONIC" | ${NODE_UND} keys add signer --recover --keyring-backend test --home "$home" > /dev/null 2>&1`,
+            `${NODE_UND} "$@" --from signer --keyring-backend test --home "$home" --node tcp://localhost:${rpc.rpc_port} ` +
+                `--chain-id ${config.networks.fund.chain_id} --gas auto --gas-adjustment 1.5 --output json --yes`,
+        ].join("\n")
+
+        try {
+            const {stdout} = await execa("docker",
+                ["exec", "-i", "-e", `MNEMONIC=${wallet.meta.wallet_json.mnemonic}`, rpc.container, "sh", "-c", script, "sh", ...txArgs],
+                {input})
+            const res = JSON.parse(stdout)
+            if (res.code !== 0) {
+                Logger.error("SEND_TX_CLI", "net=fund", `"${memo}" rejected:`, res.raw_log)
+                return null
+            }
+            Logger.info("SEND_TX_CLI", "net=fund", `rpc=${rpc.name}`, `txHash=${TxFactory.trimTxHash(res.txhash)}`, `"${memo}"`)
+            wallet.addSentTx(res.txhash)
+            return res.txhash
+        } catch (e) {
+            Logger.error("SEND_TX_CLI", "net=fund", `"${memo}"`, e.stderr || e.toString())
+            return null
+        }
     }
 
     static moveSentToPending(wallet) {

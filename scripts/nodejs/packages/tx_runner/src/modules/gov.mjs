@@ -1,6 +1,6 @@
+import fs from "fs";
 import {Logger} from "../libs/logger.mjs";
-import {createTmpLocalWallet, deleteTmpLocalWallets, getRandomWallet} from "../libs/wallet_utils.mjs";
-import {execa} from "execa";
+import {getRandomWallet} from "../libs/wallet_utils.mjs";
 import {TxFactory} from "../tx/tx_factory.mjs";
 import {cosmos} from "@unification-com/fundjs";
 const {vote, submitProposal: submitProposalV1} = cosmos.gov.v1.MessageComposer.withTypeUrl;
@@ -128,26 +128,11 @@ export class Gov {
     static async submitUpgradeProposal(fromWallet, config) {
 
         Logger.info("RUN", "submit upgrade proposal")
-        Logger.info("RUN", "create temporary local validator wallet")
 
-        await createTmpLocalWallet(fromWallet, config.dirs.wallets.tmp)
-
-        const proposal = `${config.dirs.generated}/assets/tx_runner/upgrade_proposal.json`
-
-        const {stdout} = await execa`${config.bins.und} tx gov submit-proposal ${proposal} --from ${fromWallet.meta.wallet_json.account} --node ${config.networks.fund.rpcs[0].rpc} --output json --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund --chain-id ${config.networks.fund.chain_id} --keyring-backend test --yes --home ${config.dirs.wallets.tmp}`;
-
-        const res = JSON.parse(stdout);
-
-        if(res.code === 0) {
-            Logger.info("SEND_TX", "net=fund", TxFactory.trimTxHash(res.txhash), "upgrade proposal submitted")
-            fromWallet.addSentTx(res.txhash)
-        } else {
-            Logger.error("SEND_TX", "Submit upgrade proposal failed:", res.raw_log)
-        }
-
-        Logger.info("RUN", "delete temporary local validator wallet")
-        await deleteTmpLocalWallets(config.dirs.wallets.tmp)
-
+        // make gen renders the proposal on the host; the CLI in the node container reads it from stdin
+        const proposal = fs.readFileSync(`${config.dirs.generated}/assets/tx_runner/upgrade_proposal.json`, "utf8")
+        await TxFactory.sendCliTx(config, fromWallet, ["tx", "gov", "submit-proposal", "/dev/stdin", "--gas-prices", "25.0nund"],
+            `${fromWallet.meta.wallet_json.account} submit upgrade proposal`, proposal)
     }
 
     static async validatorSubmitOrVote(queryClient, validatorWallets) {

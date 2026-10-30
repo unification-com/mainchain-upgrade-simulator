@@ -2,8 +2,6 @@ import {Enterprise} from "./enterprise.mjs";
 import {Module} from "./module.mjs";
 import {Logger} from "../libs/logger.mjs";
 import { TxFactory} from "../tx/tx_factory.mjs";
-import {createTmpLocalWallet, deleteTmpLocalWallets} from "../libs/wallet_utils.mjs";
-import {execa} from "execa";
 import {bytesToHex} from "@noble/hashes/utils";
 import {sha256} from "@cosmjs/crypto";
 import {EFUND_ACTION_STEP} from "../wallet/wallet.mjs";
@@ -80,7 +78,7 @@ export class WrkChain {
                 if(currentHeight < upgradeHeight) {
                     await WrkChain.register(queryClient, wallet, regFee)
                 } else {
-                    await WrkChain.registerUsingUndBinary(wallet, config)
+                    await WrkChain.registerUsingCli(wallet, config)
                 }
                 continue
             }
@@ -117,34 +115,16 @@ export class WrkChain {
         wallet.setBeaconOrWrkChainRegTxSent(true)
     }
 
-    static async registerUsingUndBinary(wallet, config){
-        const memo = `${wallet.meta.wallet_json.account} register WrkChain using und binary`
-        await createTmpLocalWallet(wallet, config.dirs.wallets.tmp)
-
-        Logger.info("RUN", "register wrkchain using binary")
-
-        const undBin = `${config.dirs.thirdPartyBin}/und_scanlan`
-
+    // After the upgrade, register through the upgraded und CLI rather than the signing client: its client-side fee
+    // calculation for WrkChain txs is what broke in v1.13.0, so the rehearsal must exercise it.
+    static async registerUsingCli(wallet, config){
+        const account = wallet.meta.wallet_json.account
+        const memo = `${account} register WrkChain using the und CLI`
         const genesisHash = bytesToHex(sha256(`${wallet.meta.wallet_json.address_bech32} 1 ${new Date()}`)).toUpperCase()
 
-        const {stdout} = await execa`${undBin} tx wrkchain register --moniker ${wallet.meta.wallet_json.account} --genesis ${genesisHash} --name ${wallet.meta.wallet_json.account} --base cosmos --note "${memo}" --from ${wallet.meta.wallet_json.account} --node ${config.networks.fund.rpcs[0].rpc} --output json --gas auto --gas-adjustment 1.5 --chain-id ${config.networks.fund.chain_id} --keyring-backend test --yes --home ${config.dirs.wallets.tmp}`;
-
-        const res = JSON.parse(stdout);
-
-        if(res.code === 0) {
-            Logger.info(
-                "SEND_TX_BINARY",
-                `net=${wallet.meta.network.name}`,
-                `msg=/mainchain.wrkchain.v1.MsgRegisterWrkChain`,
-                `txHash=${TxFactory.trimTxHash(res.txhash)}`,
-                `"${memo}"`
-            )
-            wallet.addSentTx(res.txhash)
-        } else {
-            Logger.error("SEND_TX_BINARY", "Submit register wrkchain failed:", res.raw_log)
-        }
-
-        await deleteTmpLocalWallets(config.dirs.wallets.tmp)
+        await TxFactory.sendCliTx(config, wallet,
+            ["tx", "wrkchain", "register", "--moniker", account, "--genesis", genesisHash, "--name", account, "--base", "cosmos", "--note", memo],
+            memo)
         wallet.setBeaconOrWrkChainRegTxSent(true)
     }
 

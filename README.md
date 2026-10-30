@@ -138,12 +138,11 @@ yarn install
 Each package also reads an optional `.env` file in its own directory (`scripts/nodejs/packages/monitor/.env`,
 `scripts/nodejs/packages/tx_runner/.env`):
 
-| Variable           | Package     | Default                                 | Purpose                                                                                    |
-|--------------------|-------------|-----------------------------------------|--------------------------------------------------------------------------------------------|
-| `GENERATED_DIR`    | both        | the repo's `generated/` directory       | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
-| `UND_BIN`          | `tx_runner` | `third_party/bin/und_<genesis version>` | The `und` binary used to submit the upgrade proposal (`make gen` downloads the default).   |
-| `LOG_LEVEL`        | `tx_runner` | `info`                                  | Log verbosity.                                                                             |
-| `USE_NO_WITH_VETO` | `tx_runner` | `false`                                 | `true` adds No-with-veto to the random votes on non-upgrade proposals (can burn deposits). |
+| Variable           | Package     | Default                           | Purpose                                                                                    |
+|--------------------|-------------|-----------------------------------|--------------------------------------------------------------------------------------------|
+| `GENERATED_DIR`    | both        | the repo's `generated/` directory | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
+| `LOG_LEVEL`        | `tx_runner` | `info`                            | Log verbosity.                                                                             |
+| `USE_NO_WITH_VETO` | `tx_runner` | `false`                           | `true` adds No-with-veto to the random votes on non-upgrade proposals (can burn deposits). |
 
 The monitor script can be run with the `mon` make target:
 
@@ -155,7 +154,9 @@ make mon
 
 The `tx_runner` script can be used to simulate most of the main transaction types on the network (sending, staking
 streams, enterprise, wrkchains, beacons etc.). It runs on the host, not in a container, and also submits and votes on
-the upgrade proposal. Before bringing the composition up, install the Node dependencies as in
+the upgrade proposal. The proposal, and a WrkChain registration after the upgrade, go through the `und` CLI rather than
+the signing client: they run inside `rpc1` with the binary the network is running, so the CLI itself is tested on both
+versions and no host `und` is needed. Before bringing the composition up, install the Node dependencies as in
 4.1 if you have not already.
 
 The `tx_runner` script can be run with the `tx` make target:
