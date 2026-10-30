@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Selects the Node version pinned for the scripts/nodejs yarn workspace and checks its dependencies are installed.
-# Shared by generate.sh (config validation) and run_nodejs.sh (monitor and tx runner).
+# Shared by validate_config.sh and run_nodejs.sh (monitor, tx runner, verify).
 use_workspace_node() {
   local L_WORKSPACE_DIR="${1}"
   local L_NODE_VERSION
