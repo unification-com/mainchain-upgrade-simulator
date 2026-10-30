@@ -16,11 +16,6 @@ source "${SCRIPT_LIB_DIR}/node_env.sh"
 source "${SCRIPT_LIB_DIR}/validate_config.sh"
 validate_config "${CONFIG}"
 
-function get_conf() {
-  local P=${1}
-  cat < "${CONFIG}" | jq -r "${P}"
-}
-
 # include lib scripts
 source "${SCRIPT_LIB_DIR}/includes.sh"
 

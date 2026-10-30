@@ -251,9 +251,7 @@ function generate_docker_compose_hermes() {
       dockerfile: docker/hermes.Dockerfile
       args:
         MNEMONIC: "${L_HERMES_MNEMONIC}"
-        UND_GENESIS_VER: "${CONF_UND_GENESIS_VER}"
         CHAIN_ID: "${CONF_CHAIN_ID}"
-        IBC_VER: "${CONF_IBC_VER}"
         IBC_CHAIN_ID: "${CONF_IBC_CHAIN_ID}"
         HERMES_VER: "${CONF_HERMES_VER}"
     container_name: ${CONF_GLOBAL_DOCKER_CONTAINER_PREFIX}ibc_hermes
