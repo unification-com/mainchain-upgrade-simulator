@@ -39,7 +39,10 @@ The `apps` object is used to define the upgrade parameters, such as the version 
   `mainchain`; the Go version used to build it is read from that ref's `go.mod` when the network is generated
 - `apps.und.upgrade.upgrade_height` - the height at which the upgrade will take place
 - `apps.und.upgrade.upgrade_plan_name` - the upgrade plan name. This must match the plan in the actual upgrade branch
-- `apps.ibc.version` - the version of `ibc-go` to use for the IBC network.
+- `apps.ibc.version` - the **Gaia release tag** (without the `v`) used for the IBC counterparty chain, e.g. `27.3.0`.
+  Despite the key name it is not an `ibc-go` version
+- `apps.ibc.hermes_version` - the Hermes relayer release
+- `apps.cosmovisor.version` - the cosmovisor release the FUND nodes run under
 
 Additionally, the size of the network can be configured:
 
@@ -83,7 +86,7 @@ Now we have the configuration files, we can build the Docker containers:
 make build
 ```
 
-If the network has been reconfigured and regenerated for a different version of `und` or the IBC `simd`, fully rebuild
+If the network has been reconfigured and regenerated for a different version of `und` or Gaia, fully rebuild
 the containers without using Docker cache:
 
 ```bash
@@ -106,7 +109,8 @@ attaches the monitor. Once the chain is well past `upgrade_height`, quit the mon
 make verify
 ```
 
-It prints a `[PASS]`/`[FAIL]` line per check and exits non-zero if any fail (see 4.6). Then stop everything,
+It prints a `[PASS]`/`[FAIL]` line per check and exits non-zero if any fail (see 4.6). Some alarming-looking log
+lines are expected along the way (see 4.7). Then stop everything,
 including the background `tx_runner`, with:
 
 ```bash
@@ -134,11 +138,12 @@ yarn install
 Each package also reads an optional `.env` file in its own directory (`scripts/nodejs/packages/monitor/.env`,
 `scripts/nodejs/packages/tx_runner/.env`):
 
-| Variable        | Package     | Default                                       | Purpose                                                                                     |
-|-----------------|-------------|-----------------------------------------------|---------------------------------------------------------------------------------------------|
-| `GENERATED_DIR` | both        | the repo's `generated/` directory             | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
-| `UND_BIN`       | `tx_runner` | `third_party/bin/und_<genesis version>`       | The `und` binary used to submit the upgrade proposal (`make gen` downloads the default).   |
-| `LOG_LEVEL`     | `tx_runner` | `info`                                        | Log verbosity.                                                                              |
+| Variable           | Package     | Default                                 | Purpose                                                                                    |
+|--------------------|-------------|-----------------------------------------|--------------------------------------------------------------------------------------------|
+| `GENERATED_DIR`    | both        | the repo's `generated/` directory       | Where `make gen` wrote its output. Only set it if that directory lives somewhere else.     |
+| `UND_BIN`          | `tx_runner` | `third_party/bin/und_<genesis version>` | The `und` binary used to submit the upgrade proposal (`make gen` downloads the default).   |
+| `LOG_LEVEL`        | `tx_runner` | `info`                                  | Log verbosity.                                                                             |
+| `USE_NO_WITH_VETO` | `tx_runner` | `false`                                 | `true` adds No-with-veto to the random votes on non-upgrade proposals (can burn deposits). |
 
 The monitor script can be run with the `mon` make target:
 
@@ -149,7 +154,8 @@ make mon
 ### 4.2 Run Transactions
 
 The `tx_runner` script can be used to simulate most of the main transaction types on the network (sending, staking
-streams, enterprise, wrkchains, beacons etc.). Before bringing the composition up, install the Node dependencies as in
+streams, enterprise, wrkchains, beacons etc.). It runs on the host, not in a container, and also submits and votes on
+the upgrade proposal. Before bringing the composition up, install the Node dependencies as in
 4.1 if you have not already.
 
 The `tx_runner` script can be run with the `tx` make target:
@@ -192,7 +198,8 @@ docker unpause t_dn_fund_sentry1
 
 ### 4.5 Restart Hermes
 
-After an upgrade has occurred, the `hermes` container will need restarting, for example:
+Hermes normally relays straight through the upgrade without help (`make verify` checks that packets were relayed after
+it). If it has stopped relaying - for example after a long halt has expired its IBC client (see 4.7) - restart it:
 
 ```bash
 docker restart t_dn_ibc_hermes
@@ -220,151 +227,70 @@ Checks, all against the running network (the plan, height and nodes come from `g
 Exit code 0 means every check passed. To add a check, add an entry to
 `scripts/nodejs/packages/verify/src/checks.mjs` - a message type is one line in `EXPECTED_MSGS`.
 
+### 4.7. What to expect during a rehearsal
+
+Some log output looks like failure but is the normal shape of an upgrade:
+
+- **`CONSENSUS FAILURE!!!` at `upgrade_height`.** Every FUND node logs `UPGRADE "<plan>" NEEDED at height: <h>`
+  followed by `CONSENSUS FAILURE!!! ... failed to apply block` and a stack trace. This is how the old binary halts for
+  an upgrade. cosmovisor then logs `upgrade detected, relaunching`, starts the new binary from
+  `cosmovisor/upgrades/<plan>/bin/und`, and it logs `applying upgrade "<plan>" at height: <h>` and carries on.
+- **The `tx_runner` waits out the halt.** It logs `websocket disconnected - probably upgrade in progress` and resumes
+  when the chain does. It switches to the new binary's message shapes one block before `upgrade_height`, since the
+  upgrade block is the first one the new binary executes. An occasional `account sequence mismatch` corrects itself on
+  the wallet's next transaction.
+- **Hermes logs `ERROR`s that are harmless.** `misbehaviour checking is being disabled ... could not extract header`
+  repeats throughout; WebSocket / `failed to collect events` errors appear during the halt; a `will retry` client
+  error can appear at start-up before both chains are ready.
+- **Long halts can expire the IBC client.** The simulator's genesis sets a 60 s unbonding time, which caps Hermes's
+  client `trusting_period` at 40 s (`templates/configs/hermes_config.toml`). A halt longer than that (for example a
+  very large `upgrade_height` with slow node restarts) expires the client and relaying stops. Short rehearsals are
+  well inside it.
+
 ## 5. Example commands
 
-The `t_dn_tx_runner` container can also be used to run arbitrary queries etc., for example
+Every generated wallet - validators, test accounts, BEACON and WRKChain owners, stream senders and receivers, IBC
+accounts - is in `generated/assets/wallets/und/` (and `generated/assets/wallets/gaiad/`), mnemonic included. The
+examples use the default ports from `example.config.json` (FUND `rpc1`: RPC 26760, REST 1320) and the `8-vaxildan`
+plan; adjust them to your `config.json`.
 
-Pre-upgrade, using the `und_genesis` binary:
-
-```bash
-docker exec -it t_dn_tx_runner /bin/bash
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis keys show t1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query account <WALLET_ADDR> --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query tx <TX_HASH> --home /root/.und_cli_txs --output json
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query gov proposals --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query enterprise orders --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query beacon search --home /root/.und_cli_txs --output json | jq '.beacons | length'
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query beacon beacon 1 --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query wrkchain wrkchain 1 --home /root/.und_cli_txs --output json
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query beacon params --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query wrkchain params --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_genesis query staking params --home /root/.und_cli_txs --output json
-```
-
-Post-upgrade, using the `und_upgrade` binary:
+Run the CLI inside a FUND node container. `cosmovisor/current` is always the binary that node is running, so the same
+commands work before and after the upgrade:
 
 ```bash
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show t1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
+UND="docker exec -i t_dn_fund_rpc1 /root/.und_mainchain/cosmovisor/current/bin/und"
+NODE="--node tcp://localhost:26760"
 
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query beacon beacon 1 --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query wrkchain wrkchain 1 --home /root/.und_cli_txs --output json
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query beacon params --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query wrkchain params --home /root/.und_cli_txs --output json
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking params --home /root/.und_cli_txs --output json
+$UND version
+$UND query upgrade applied 8-vaxildan $NODE --output json
+$UND query beacon beacon 1 $NODE --output json
+$UND query stream streams $NODE --output json
+$UND query staking params $NODE --output json
 ```
 
-IBC Examples
+Or query REST from the host:
 
 ```bash
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx ibc-transfer transfer transfer channel-0 $(docker exec -it t_dn_tx_runner /usr/local/bin/gaiad keys show ibc_gaiad3 -a --keyring-backend test --keyring-dir /root/.gaiad_cli_txs) 10000000000nund \
-  --home /root/.und_cli_txs \
-  --keyring-backend test \
-  --node http://172.25.1.8:26906 \
-  --chain-id FUND-DevNet-2 \
-  --from ibc_und1 \
-  --gas auto \
-  --gas-adjustment 1.2 \
-  --gas-prices 25.0nund \
-  -y
-  
-  
-docker exec -it t_dn_tx_runner /usr/local/bin/gaiad tx ibc-transfer transfer transfer channel-0 $(docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ibc_und1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs) 10000000000ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618 \
-  --home /root/.gaiad_cli_txs \
-  --keyring-backend test \
-  --node http://172.25.1.12:27001 \
-  --chain-id IBC-SimApp-DevNet \
-  --from ibc_gaiad3 \
-  --gas auto \
-  --gas-adjustment 1.2 \
-  --gas-prices 0.1stake \
-  -y
+curl -s localhost:1320/cosmos/upgrade/v1beta1/applied_plan/8-vaxildan
+curl -s localhost:1320/mainchain/stream/v1/streams/all | jq '.streams | length'
 ```
 
-Streams
+To sign transactions, recover generated wallets into a throwaway keyring in the container. The `tx_runner` signs with
+the same wallets, so stop it first (`make tx-stop`) and give any of its pending transactions a block to clear, or
+expect `account sequence mismatch`:
 
 ```bash
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream params --home /root/.und_cli_txs
+W=generated/assets/wallets/und
+TX="--keyring-backend test --home /tmp/cli $NODE --chain-id FUND-DevNet-2 --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund -y"
 
-# calculate flow rate
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream calculate_flow --coin 1000000000000nund --period day --duration 1 --home /root/.und_cli_txs
+jq -r .mnemonic $W/test10.json | $UND keys add test10 --recover --keyring-backend test --home /tmp/cli
+jq -r .mnemonic $W/stream_receiver2.json | $UND keys add stream_receiver2 --recover --keyring-backend test --home /tmp/cli
 
-# get wallet address of receiver
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ps_r1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
+# send 1 FUND
+$UND tx bank send test10 $(jq -r .address_bech32 $W/test9.json) 1000000000nund $TX
 
-# create stream
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream create ADDRESS_FROM_ABOVE 1000000000000nund 11574074 \
-  --from ps_s1 \
-  --keyring-backend test \
-  --node http://172.25.1.8:26906 \
-  --chain-id FUND-DevNet-2 \
-  --gas auto \
-  --gas-adjustment 1.5 \
-  --gas-prices 25.0nund \
-  --home /root/.und_cli_txs
+# claim from a stream - from 8-vaxildan on, streams are per denom, so claim takes [sender] [denom]
+$UND tx stream claim $(jq -r .address_bech32 $W/stream_sender2.json) nund --from stream_receiver2 $TX
 
-# query streams
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query stream streams --home /root/.und_cli_txs
-
-# get wallet address of sender
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade keys show ps_s1 -a --keyring-backend test --keyring-dir /root/.und_cli_txs
-
-# Claim form stream
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream claim ADDRESS_FROM_ABOVE \
-  --from ps_r1 \
-  --keyring-backend test \
-  --node http://172.25.1.8:26906 \
-  --chain-id FUND-DevNet-2 \
-  --gas auto \
-  --gas-adjustment 1.5 \
-  --gas-prices 25.0nund \
-  --home /root/.und_cli_txs
-
-# update flow
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream update-flow RECEIVER_WALLET_ADDRESS 277777777 \
-  --from ps_s1 \
-  --keyring-backend test \
-  --node http://172.25.1.8:26906 \
-  --chain-id FUND-DevNet-2 \
-  --gas auto \
-  --gas-adjustment 1.5 \
-  --gas-prices 25.0nund \
-  --home /root/.und_cli_txs
-  
-# topup deposit
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx stream topup RECEIVER_WALLET_ADDRESS 1000000000000nund \
-  --from ps_s1 \
-  --keyring-backend test \
-  --node http://172.25.1.8:26906 \
-  --chain-id FUND-DevNet-2 \
-  --gas auto \
-  --gas-adjustment 1.5 \
-  --gas-prices 25.0nund \
-  --home /root/.und_cli_txs
-
-# query tx hash reference command
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query tx TX_HASH --home /root/.und_cli_txs
-
+$UND query tx <TX_HASH> $NODE --output json
 ```
-
-
-
-TMP - CHECKING MIN COMMISSION - EXECUTE AFTER UPGRADE & PROPOSAL PASSES
-This should occur (using the default config in `example.config.json`) at around block 75
-
-```bash
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking params --home /root/.und_cli_txs
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade query staking validators --home /root/.und_cli_txs
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-validator --commission-rate "0.05" --from validator1 --home /root/.und_cli_txs --keyring-backend test --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-validator --commission-rate "0.05" --from validator2 --home /root/.und_cli_txs --keyring-backend test --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-validator --commission-rate "0.05" --from validator3 --home /root/.und_cli_txs --keyring-backend test --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund
-
-docker exec -it t_dn_tx_runner /usr/local/bin/und_upgrade tx staking edit-validator --commission-rate "0.05" --from validator4 --home /root/.und_cli_txs --keyring-backend test --gas auto --gas-adjustment 1.5 --gas-prices 25.0nund
-```
-

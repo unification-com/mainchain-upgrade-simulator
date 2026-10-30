@@ -67,6 +67,12 @@ TYPE_WALLET_PAYMENT_STREAM_RECEIVER="stream_receiver"
 # load config.json
 ##################
 
+# read one value from config.json (CONFIG is set by generate.sh, the only script that sources this file)
+function get_conf() {
+  local P=${1}
+  cat < "${CONFIG}" | jq -r "${P}"
+}
+
 # FUND
 CONF_CHAIN_ID=$(get_conf ".apps.und.chain_id")
 CONF_UND_GENESIS_VER=$(get_conf ".apps.und.genesis.version")
@@ -126,17 +132,7 @@ CONF_GLOBAL_DOCKER_NETWORK="${CONTAINER_PREFIX}up_sim_network"
 # Binaries required to generate genesis/accounts etc.
 UND_BIN="${BIN_DIR}/und_${CONF_UND_GENESIS_VER}"
 GAIAD_BIN="${BIN_DIR}/gaiad_${CONF_IBC_VER}"
-V_PREFIX="v"
 TOMLI_BIN="${BIN_DIR}/tomli_v0.3.0"
 HERMES_BIN="${BIN_DIR}/hermes_${CONF_HERMES_VER}"
 
 IBC_DENOM="ibc/D6CFF2B192E06AFD4CD78859EA7CAD8B82405959834282BE87ABB6B957939618"
-
-###########################
-# Config specific functions
-###########################
-
-function get_conf() {
-  local P=${1}
-  cat < "${CONFIG}" | jq -r "${P}"
-}

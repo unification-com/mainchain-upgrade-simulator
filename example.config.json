@@ -4,12 +4,12 @@
       "chain_id": "FUND-DevNet-2",
       "genesis_time": "2025-07-24T10:11:41.253082833Z",
       "genesis": {
-        "version": "1.11.1"
+        "version": "1.12.0"
       },
       "upgrade": {
-        "branch": "taryon",
+        "branch": "v1.13.4",
         "upgrade_height": 50,
-        "upgrade_plan_name": "7-taryon"
+        "upgrade_plan_name": "8-vaxildan"
       },
       "nodes": {
         "num_validators": 3,
@@ -70,8 +70,8 @@
       }
     },
     "ibc": {
-      "version": "22.3.1",
-      "hermes_version": "1.11.0",
+      "version": "27.3.0",
+      "hermes_version": "1.13.3",
       "chain_id": "IBC-SimApp-DevNet",
       "accounts": {
         "num_ibc_accounts": 10,
