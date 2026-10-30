@@ -1,8 +1,7 @@
 // Command gen generates a simulator network from config.json: node homes, wallets, genesis files and
-// docker-compose.yml. It replaces scripts/bash/generate.sh stage by stage (make gen-go); until the port is complete,
-// make gen is still the bash generator.
+// docker-compose.yml.
 //
-// Run it from the repo root after the config has been validated (make gen-go does both).
+// Run it from the repo root after the config has been validated - make gen does both.
 package main
 
 import (
