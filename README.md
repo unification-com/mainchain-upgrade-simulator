@@ -27,6 +27,7 @@ This suite has been used internally to test upgrading the following:
 - 1.9.x -> 1.10.x
 - 1.10.x -> 1.11.x
 - 1.11.x -> 1.12.x
+- 1.12.x -> 1.13.x
 
 ## 1. Configuring a simulation DevNet
 
@@ -69,14 +70,18 @@ To check a config on its own: `yarn --cwd scripts/nodejs workspace @simulator/co
 (defaults to `config.json`; a relative path is taken from the repo root).
 
 Once configured, the network can be generated. This will generate all the necessary genesis, scripts, wallets and node
-config files etc. required. Run:
+config files etc. required. The generator is a Go program (`generator/`), so a **Go 1.26+ toolchain** is needed; `make
+gen` builds and runs it. Run:
 
-```bash 
+```bash
 make gen
 ```
 
 All generated files will be saved to the `generated/assets` directory. Additionally, a `docker-compose.yml` file
 will be generated in this root directory.
+
+The previous bash generator is kept for now as `make gen-bash`, a fallback while the Go one settles in; it will be
+removed with `scripts/bash/lib/`.
 
 ## 3. Build the Docker containers
 

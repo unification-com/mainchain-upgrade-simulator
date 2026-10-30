@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Fails fast on a malformed config file, before anything is generated. The rules live in schema/config.schema.json.
-# Run from the repo root (make gen and make gen-go both do this before generating).
+# Run from the repo root (make gen and make gen-bash both do this before generating).
 
 set -e
 

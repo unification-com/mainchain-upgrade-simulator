@@ -1,8 +1,8 @@
 # Network generator (Go)
 
-Generates a simulator network from `config.json` - node homes, wallets, genesis files and `docker-compose.yml`. It is
-replacing the bash generator (`scripts/bash/generate.sh` and `scripts/bash/lib/`) stage by stage. Until the port is
-complete, `make gen` is still the bash generator and `make gen-go` runs this one.
+Generates a simulator network from `config.json` - node homes, wallets, genesis files and `docker-compose.yml`. It
+replaced the bash generator (`scripts/bash/generate.sh` and `scripts/bash/lib/`), which stays available as
+`make gen-bash` until it is removed.
 
 | Stage | Ported                                                                                   | Status |
 |-------|------------------------------------------------------------------------------------------|--------|
@@ -10,14 +10,14 @@ complete, `make gen` is still the bash generator and `make gen-go` runs this one
 | G2    | genesis: keys and wallet files, accounts, enterprise, static accounts, nodes, gentxs     | done   |
 | G3    | node `config.toml` / `app.toml`, nginx proxies, Hermes config, upgrade proposal          | done   |
 | G4    | `docker-compose.yml`, `overview.json`                                                    | done   |
-| G5    | output compared with bash on several configs, then `make gen` switches to this generator |        |
+| G5    | output compared with bash on several configs, then `make gen` switches to this generator | done   |
 
-The config rules live in `schema/config.schema.json` and are enforced by the Node validator, which `make gen-go` runs
+The config rules live in `schema/config.schema.json` and are enforced by the Node validator, which `make gen` runs
 first; the generator only decodes the file, strictly, into the types in `internal/config`. The genesis-version `und`
 and `gaiad` binaries still do the key and genesis work, as they do for the bash generator.
 
 ```bash
-make gen-go                 # validate config.json, then generate
+make gen                    # validate config.json, then generate
 cd generator && go test ./...
 ```
 
@@ -28,8 +28,8 @@ addresses, node IDs, signatures, times, validator stakes) and compares JSON and 
 files by glob. `docker-compose.yml` is written outside `generated/`, so copy it in to include it.
 
 ```bash
-make gen && cp -r generated /tmp/bash-generated && cp docker-compose.yml /tmp/bash-generated/
-make gen-go && cp docker-compose.yml generated/
+make gen-bash && cp -r generated /tmp/bash-generated && cp docker-compose.yml /tmp/bash-generated/
+make gen && cp docker-compose.yml generated/
 go -C generator run ./cmd/gencompare /tmp/bash-generated generated
 rm generated/docker-compose.yml
 ```

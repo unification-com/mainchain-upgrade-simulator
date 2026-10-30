@@ -21,13 +21,14 @@ sim: clean-gen build tx-bg
 	@echo ""
 	@./scripts/bash/run_nodejs.sh monitor
 
+# Validate config.json, then generate the network with the Go generator (generator/).
 gen:
-	./scripts/bash/generate.sh
-
-# The Go generator, replacing scripts/bash stage by stage (generator/README.md). Not yet complete - use make gen.
-gen-go:
 	@./scripts/bash/validate_config.sh config.json
 	go -C generator run ./cmd/gen -root ..
+
+# The bash generator the Go one replaced, kept as a fallback for now; it goes with scripts/bash/lib.
+gen-bash:
+	./scripts/bash/generate.sh
 
 build:
 	docker compose build
@@ -67,4 +68,4 @@ clean:
 	@rm -f ./docker-compose.yml
 	@rm -rf ./generated
 
-.PHONY: all all-nc build build-nc up down gen gen-go mon tx tx-bg tx-stop sim verify statesync clean run-help clean-gen
+.PHONY: all all-nc build build-nc up down gen gen-bash mon tx tx-bg tx-stop sim verify statesync clean run-help clean-gen
