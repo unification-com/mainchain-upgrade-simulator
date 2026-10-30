@@ -22,9 +22,8 @@ export class Beacon {
     static beaconMetadata = ""
 
     // Called by the runner each block so records match the running consensus version.
-    static setBeaconMetadata(currentHeight, upgradeHeight) {
-        const meta = (upgradeHeight > 0 && currentHeight >= upgradeHeight)
-            ? `sim;h=${currentHeight}` : ""
+    static setBeaconMetadata(upgraded, currentHeight) {
+        const meta = upgraded ? `sim;h=${currentHeight}` : ""
         if ((meta === "") !== (Beacon.beaconMetadata === "")) {
             Logger.info("BEACON METADATA", `recording timestamps with metadata from height ${currentHeight}`)
         }

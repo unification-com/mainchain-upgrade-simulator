@@ -16,7 +16,8 @@ run-help:
 sim: clean-gen build tx-bg
 	docker compose up -d
 	@echo ""
-	@echo "network up, tx runner logging to out/tx_runner.log - quit the monitor with q, then run 'make down'"
+	@echo "network up, tx runner logging to out/tx_runner.log - quit the monitor with q, check the run with"
+	@echo "'make verify', then stop everything with 'make down'"
 	@echo ""
 	@./scripts/bash/run_nodejs.sh monitor
 
@@ -41,6 +42,10 @@ mon:
 tx:
 	@./scripts/bash/run_nodejs.sh tx_runner
 
+# PASS/FAIL checks against the running network (upgrade applied, blocks, validators, IBC, a success per message type)
+verify:
+	@./scripts/bash/run_nodejs.sh verify
+
 # tx runner in the background, in its own process group so tx-stop also stops the yarn and node processes under it
 tx-bg: tx-stop
 	@mkdir -p out
@@ -57,4 +62,4 @@ clean:
 	@rm -f ./docker-compose.yml
 	@rm -rf ./generated
 
-.PHONY: all all-nc build build-nc up down gen mon tx tx-bg tx-stop sim statesync clean run-help clean-gen
+.PHONY: all all-nc build build-nc up down gen mon tx tx-bg tx-stop sim verify statesync clean run-help clean-gen

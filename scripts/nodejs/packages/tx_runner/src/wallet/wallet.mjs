@@ -208,6 +208,14 @@ export class Wallet {
         }
     }
 
+    // Take the sequence CheckTx asked for in an "account sequence mismatch" rejection. Unlike committed state,
+    // CheckTx's view includes the mempool, so its expectation is safe to adopt mid-flight. Without this, one sequence
+    // the chain never consumed (a tx that landed in a block but failed before the ante handler, e.g. ValidateBasic)
+    // leaves the counter one ahead and every later tx from the wallet is rejected.
+    adoptSequence(seq) {
+        this.#sequence = seq
+    }
+
     calculateFee(gas) {
         const gasMul = Math.round(gas * this.#gasMultiplier)
         const feeAmnt = this.#gasPrice.amount.multiply(gasMul)

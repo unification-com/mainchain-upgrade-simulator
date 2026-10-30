@@ -39,10 +39,16 @@ export class TxFactory {
 
         } catch (e) {
             Logger.error("SEND_TX", `net=${wallet.meta.network.name}`, e.toString())
-            // A rejected broadcast never entered the mempool, so hand its reserved sequence back
-            // rather than leaving a gap that would invalidate every subsequent tx.
+            // Only once a sequence was reserved: the broadcast was rejected by CheckTx. A sequence mismatch names the
+            // sequence CheckTx wants - take it. Any other rejection never entered the mempool, so hand the reserved
+            // sequence back rather than leaving a gap that would invalidate every subsequent tx.
             if (usedSequence !== null) {
-                wallet.releaseSequence(usedSequence)
+                const mismatch = /account sequence mismatch, expected (\d+)/.exec(e.toString())
+                if (mismatch) {
+                    wallet.adoptSequence(parseInt(mismatch[1], 10))
+                } else {
+                    wallet.releaseSequence(usedSequence)
+                }
             }
         }
 

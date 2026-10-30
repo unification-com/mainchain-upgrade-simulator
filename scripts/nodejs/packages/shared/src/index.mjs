@@ -36,3 +36,12 @@ export const repoRoot = findRepoRoot(path.dirname(fileURLToPath(import.meta.url)
 // The generator's output directory: GENERATED_DIR if set (relative to the working directory), otherwise the
 // repo's own generated/ - so no .env is needed for the usual layout.
 export const generatedDir = () => (process.env.GENERATED_DIR ? path.resolve(process.env.GENERATED_DIR) : path.join(repoRoot, 'generated'))
+
+// The network layout make gen wrote (nodes, ports, containers, upgrade plan + height) - what every package works from.
+export const loadOverview = () => JSON.parse(fs.readFileSync(path.join(generatedDir(), 'network', 'overview.json'), 'utf8'))
+
+// The compose project's running containers, one object per container ({Name, State, Status, ...}).
+export const composeContainers = async () => {
+    const {stdout} = await execa`docker compose ps --format json`
+    return stdout ? stdout.split('\n').map((line) => JSON.parse(line)) : []
+}
