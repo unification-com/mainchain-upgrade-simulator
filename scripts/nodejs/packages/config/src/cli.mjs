@@ -7,7 +7,9 @@ import {repoRoot} from '@simulator/shared'
 import {validateConfig} from './validate.mjs'
 
 const configPath = path.resolve(repoRoot, process.argv[2] ?? 'config.json')
-const name = path.relative(repoRoot, configPath) || configPath
+// repo-relative for files in the repo, absolute for anything outside it
+const relative = path.relative(repoRoot, configPath)
+const name = relative && !relative.startsWith('..') ? relative : configPath
 
 let config
 try {

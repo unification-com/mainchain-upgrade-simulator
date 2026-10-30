@@ -12,9 +12,7 @@ if ! test -f "$CONFIG"; then
 fi
 
 # validate config.json before anything is generated
-source "${SCRIPT_LIB_DIR}/node_env.sh"
-source "${SCRIPT_LIB_DIR}/validate_config.sh"
-validate_config "${CONFIG}"
+"${BASE_DIR}/scripts/bash/validate_config.sh" "${CONFIG}"
 
 # include lib scripts
 source "${SCRIPT_LIB_DIR}/includes.sh"

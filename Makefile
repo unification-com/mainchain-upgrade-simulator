@@ -24,6 +24,11 @@ sim: clean-gen build tx-bg
 gen:
 	./scripts/bash/generate.sh
 
+# The Go generator, replacing scripts/bash stage by stage (generator/README.md). Not yet complete - use make gen.
+gen-go:
+	@./scripts/bash/validate_config.sh config.json
+	go -C generator run ./cmd/gen -root ..
+
 build:
 	docker compose build
 
@@ -62,4 +67,4 @@ clean:
 	@rm -f ./docker-compose.yml
 	@rm -rf ./generated
 
-.PHONY: all all-nc build build-nc up down gen mon tx tx-bg tx-stop sim verify statesync clean run-help clean-gen
+.PHONY: all all-nc build build-nc up down gen gen-go mon tx tx-bg tx-stop sim verify statesync clean run-help clean-gen
