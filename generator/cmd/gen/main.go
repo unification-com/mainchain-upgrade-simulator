@@ -55,6 +55,6 @@ func run(root, configPath string) error {
 		return err
 	}
 
-	fmt.Println("go generator: ported up to the genesis files and node homes - node configs, Hermes and docker-compose.yml still come from make gen")
+	fmt.Println("go generator: ported up to the node, Hermes and proposal configs - docker-compose.yml and overview.json still come from make gen")
 	return nil
 }

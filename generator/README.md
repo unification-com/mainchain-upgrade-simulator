@@ -8,8 +8,8 @@ complete, `make gen` is still the bash generator and `make gen-go` runs this one
 |-------|------------------------------------------------------------------------------------------|--------|
 | G1    | typed config, output directories, third-party binaries, upgrade Go version               | done   |
 | G2    | genesis: keys and wallet files, accounts, enterprise, static accounts, nodes, gentxs     | done   |
-| G3    | node `config.toml` / `app.toml`, Hermes, proxy, proposal files, `overview.json`          |        |
-| G4    | `docker-compose.yml`                                                                     |        |
+| G3    | node `config.toml` / `app.toml`, nginx proxies, Hermes config, upgrade proposal          | done   |
+| G4    | `docker-compose.yml`, `overview.json`                                                    |        |
 | G5    | output compared with bash on several configs, then `make gen` switches to this generator |        |
 
 The config rules live in `schema/config.schema.json` and are enforced by the Node validator, which `make gen-go` runs
@@ -30,8 +30,7 @@ stage does not produce yet.
 ```bash
 make gen && cp -r generated /tmp/bash-generated
 make gen-go
-go -C generator run ./cmd/gencompare -skip config.toml -skip app.toml -skip 'assets/hermes/*' \
-  -skip 'assets/tx_runner/*' -skip nginx.conf -skip network/overview.json -skip network/hermes.json \
+go -C generator run ./cmd/gencompare -skip network/overview.json -skip network/hermes.json \
   /tmp/bash-generated generated
 ```
 
@@ -41,3 +40,6 @@ Intended differences from the bash output:
 - wallet files have no `key_files` (nothing reads them since the tx runner signs CLI transactions in a node container)
 - node descriptors have no `val_pubkey_escaped` (it only fed the bash gentx command)
 - no `network/docker/` counter files or `stake_*.json` files (bash-internal state, kept in memory)
+
+The nginx proxy and upgrade proposal templates in `templates/configs/` are shared by both generators; node TOML files
+are edited in place (`internal/tomledit`), changing only the lines the bash generator's `tomli` calls changed.

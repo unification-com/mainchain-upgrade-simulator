@@ -1,0 +1,19 @@
+{
+  "messages": [
+    {
+      "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade",
+      "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+      "plan": {
+        "name": "__PLAN_NAME__",
+        "time": "0001-01-01T00:00:00Z",
+        "height": "__UPGRADE_HEIGHT__",
+        "info": "",
+        "upgraded_client_state": null
+      }
+    }
+  ],
+  "metadata": "ipfs://CID",
+  "deposit": "10000000000nund",
+  "title": "test upgrade to __PLAN_NAME__",
+  "summary": "test upgrade to __PLAN_NAME__"
+}
