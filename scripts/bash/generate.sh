@@ -174,7 +174,6 @@ config_hermes
 generate_docker_compose_hermes
 
 # 7. generate tx_runner
-generate_tx_runner_dotenv
 generate_upgrade_tx
 
 # 8. configure nginx proxy & finalise network docker-compose.yaml

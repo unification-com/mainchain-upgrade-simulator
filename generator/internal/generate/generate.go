@@ -20,17 +20,27 @@ import (
 
 // side is one chain: the FUND chain under test, or the Gaia chain on the other end of IBC.
 type side struct {
-	bin     chain.Binary
-	chainID string
-	denom   string
-	home    string // the throwaway home that builds the genesis and holds every key
-	wallets string // wallet files
-	nodes   string // node homes, copied into the images
-	network string // node descriptors
-	all     []network.Node
+	bin         chain.Binary
+	chainID     string
+	denom       string
+	minGasPrice string
+	home        string // the throwaway home that builds the genesis and holds every key
+	wallets     string // wallet files
+	nodes       string // node homes, copied into the images
+	network     string // node descriptors
+	all         []network.Node
 }
 
 func (s *side) genesisFile() string { return filepath.Join(s.home, "config", "genesis.json") }
+
+func (s *side) node(name string) (network.Node, error) {
+	for _, n := range s.all {
+		if n.Name == name {
+			return n, nil
+		}
+	}
+	return network.Node{}, fmt.Errorf("%s has no node %s", s.chainID, name)
+}
 
 type generator struct {
 	cfg       *config.Config
@@ -44,9 +54,9 @@ type generator struct {
 func Run(p paths.Paths, cfg *config.Config) error {
 	g := &generator{
 		cfg: cfg, p: p,
-		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund",
+		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund", minGasPrice: "25.0nund",
 			home: p.TmpGlobalUndHome, wallets: p.WalletsUnd, nodes: p.NodesFund, network: p.NetworkUnd},
-		ibc: &side{bin: chain.Binary{Path: thirdparty.GaiadBin(p, cfg)}, chainID: cfg.Apps.IBC.ChainID, denom: "stake",
+		ibc: &side{bin: chain.Binary{Path: thirdparty.GaiadBin(p, cfg)}, chainID: cfg.Apps.IBC.ChainID, denom: "stake", minGasPrice: "0stake",
 			home: p.TmpGlobalGaiadHome, wallets: p.WalletsGaiad, nodes: p.NodesGaiad, network: p.NetworkGaiad},
 		alloc: network.NewAllocator(cfg.Docker.Network),
 		rng:   rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())),
@@ -60,6 +70,9 @@ func Run(p paths.Paths, cfg *config.Config) error {
 		{"create the validators and their gentxs", g.createValidators},
 		{"create the sentry, seed and RPC nodes", g.createOtherNodes},
 		{"copy the genesis files to the nodes", g.distributeGenesis},
+		{"configure the nodes", g.configureNodes},
+		{"configure Hermes", g.configureHermes},
+		{"write the upgrade proposal", g.writeProposal},
 		{"remove the throwaway genesis homes", func() error { return os.RemoveAll(p.Tmp) }},
 	} {
 		fmt.Println(step.name)
