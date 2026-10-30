@@ -30,12 +30,14 @@ export class PaymentStream {
         PaymentStream.queryClientV2 = client
     }
 
-    // Called by the runner each block so the messages match the running consensus version.
+    // Called by the runner each block so the messages match the running consensus version. Crossing the upgrade also
+    // starts a new coverage phase (see uncoveredOps).
     static setStreamDenom(upgraded, currentHeight) {
         const denom = upgraded ? "nund" : ""
         if (denom !== PaymentStream.streamDenom) {
             Logger.info("STREAM DENOM", `switching stream msg denom to '${denom}' at height ${currentHeight}`)
             PaymentStream.streamDenom = denom
+            PaymentStream.uncoveredOps = [...PaymentStream.ValidRandomMsgTypes]
         }
     }
 
@@ -54,11 +56,10 @@ export class PaymentStream {
         PaymentStream.MsgTypes.STREAM_CANCEL,
     ]
 
-    static randomMsgType() {
-        const random = Math.floor(Math.random() * PaymentStream.ValidRandomMsgTypes.length);
-
-        return PaymentStream.ValidRandomMsgTypes[random]
-    }
+    // Sender ops not yet sent in the current phase (before / from the upgrade). `make verify` needs every one on both
+    // sides of the upgrade, but cancel is a 2% roll and can simply not come up in a short rehearsal - so each phase
+    // works through this list first, then goes random.
+    static uncoveredOps = [...PaymentStream.ValidRandomMsgTypes]
 
     static getMsg(msgType, params) {
         switch (msgType) {
@@ -80,6 +81,11 @@ export class PaymentStream {
     }
 
     static randomStreamSenderMsg(params) {
+        const uncovered = PaymentStream.uncoveredOps.shift()
+        if (uncovered) {
+            return PaymentStream.getMsg(uncovered, params)
+        }
+
         const rnd = Math.floor(Math.random() * 100)
 
         if(rnd < 2) {

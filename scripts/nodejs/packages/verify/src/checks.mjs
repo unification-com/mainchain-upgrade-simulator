@@ -20,6 +20,7 @@ const EXPECTED_MSGS = [
     {type: "/cosmos.bank.v1beta1.MsgSend"},
     {type: "/cosmos.staking.v1beta1.MsgDelegate"},
     {type: "/cosmos.staking.v1beta1.MsgUndelegate"},
+    {type: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward"},
     {type: "/mainchain.beacon.v1.MsgRegisterBeacon"},
     {type: "/mainchain.beacon.v1.MsgRecordBeaconTimestamp"},
     {type: "/mainchain.wrkchain.v1.MsgRegisterWrkChain"},

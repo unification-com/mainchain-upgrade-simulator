@@ -93,7 +93,7 @@ export class Stake {
                 await Stake.unstake(queryClient, fromWallet, validator, delegationBalance)
                 break
             case Stake.MsgTypes.STAKING_WITHDRAW:
-                await Stake.withdrawRewards(queryClient, fromWallet, validator)
+                await Stake.withdrawRewards(queryClient, fromWallet, validator, delegationBalance)
                 break
         }
     }
@@ -145,10 +145,8 @@ export class Stake {
         await TxFactory.sendTx(fromWallet, [msg], memo, null)
     }
 
-    static async withdrawRewards(queryClient, fromWallet, validator) {
-        const stakeBalance = await this.getDelegatedBalance(fromWallet, validator)
-
-        const stakeAmount = parseInt(stakeBalance?.amount, 10)
+    static async withdrawRewards(queryClient, fromWallet, validator, delegationBalance) {
+        const stakeAmount = parseInt(delegationBalance?.amount, 10)
 
         if(stakeAmount === 0) {
             Logger.verbose("SKIP", `${fromWallet.meta.wallet_json.account} has zero stake in ${validator.meta.wallet_json.account}`)

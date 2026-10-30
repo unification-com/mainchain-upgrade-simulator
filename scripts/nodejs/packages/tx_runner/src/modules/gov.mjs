@@ -189,7 +189,7 @@ export class Gov {
             // Inclusion of No with Veto votes can be enabled in .env. This will mean
             // nund can be burned from the supply if sufficient wallets vote using
             // the veto option
-            const vMax = (process.env.USE_NO_WITH_VETO === true) ? 4 : 3
+            const vMax = (process.env.USE_NO_WITH_VETO === "true") ? 4 : 3
             voteOption = Math.floor(Math.random() * (vMax) + 1)
         }
 
