@@ -18,6 +18,9 @@ import (
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/wallet"
 )
 
+// fundGasPrice is the FUND nodes' minimum gas price, in nund per unit of gas.
+const fundGasPrice = 25
+
 // side is one chain: the FUND chain under test, or the Gaia chain on the other end of IBC.
 type side struct {
 	bin             chain.Binary
@@ -52,6 +55,7 @@ type generator struct {
 	upgradeGoVersion string // golang image tag that builds the upgrade binary
 	hermesMnemonic   string // the relayer's account, on both chains
 	hermesIP         string
+	fundWallets      map[string]wallet.Wallet // by account name, for the custom txs' {{name}} placeholders
 }
 
 // Run generates the network into p.Generated and p.DockerCompose. upgradeGoVersion is the golang image tag that builds
@@ -59,8 +63,8 @@ type generator struct {
 func Run(p paths.Paths, cfg *config.Config, upgradeGoVersion string) error {
 	prefix := cfg.Docker.ContainerPrefix
 	g := &generator{
-		cfg: cfg, p: p, upgradeGoVersion: upgradeGoVersion,
-		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund", minGasPrice: "25.0nund", containerPrefix: prefix + "fund",
+		cfg: cfg, p: p, upgradeGoVersion: upgradeGoVersion, fundWallets: map[string]wallet.Wallet{},
+		fund: &side{bin: chain.Binary{Path: thirdparty.UndBin(p, cfg)}, chainID: cfg.Apps.Und.ChainID, denom: "nund", minGasPrice: fmt.Sprintf("%d.0nund", fundGasPrice), containerPrefix: prefix + "fund",
 			home: p.TmpGlobalUndHome, wallets: p.WalletsUnd, nodes: p.NodesFund, network: p.NetworkUnd},
 		ibc: &side{bin: chain.Binary{Path: thirdparty.GaiadBin(p, cfg)}, chainID: cfg.Apps.IBC.ChainID, denom: "stake", minGasPrice: "0stake", containerPrefix: prefix + "ibc_gaiad",
 			home: p.TmpGlobalGaiadHome, wallets: p.WalletsGaiad, nodes: p.NodesGaiad, network: p.NetworkGaiad},
@@ -79,6 +83,7 @@ func Run(p paths.Paths, cfg *config.Config, upgradeGoVersion string) error {
 		{"configure the nodes", g.configureNodes},
 		{"configure Hermes", g.configureHermes},
 		{"write the upgrade proposal", g.writeProposal},
+		{"write the custom transactions", g.writeCustomTxs},
 		{"write docker-compose.yml", g.writeCompose},
 		{"write the network overview", g.writeOverview},
 		{"remove the throwaway genesis homes", func() error { return os.RemoveAll(p.Tmp) }},
@@ -111,6 +116,9 @@ func (g *generator) fundAccount(s *side, key chain.Key, walletType string) (wall
 	}
 	if err := w.Write(s.wallets); err != nil {
 		return w, err
+	}
+	if s == g.fund {
+		g.fundWallets[w.Account] = w
 	}
 	coins := fmt.Sprintf("%d%s", g.cfg.Apps.Und.Accounts.Nund, s.denom)
 	return w, s.bin.AddGenesisAccount(s.home, w.AddressBech32, coins)

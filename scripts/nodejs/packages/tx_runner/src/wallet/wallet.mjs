@@ -73,7 +73,7 @@ export class Wallet {
     // Txs are broadcast with broadcastTxSync (fire-and-forget), so a tx sits in the mempool without
     // the committed account sequence advancing. cosmjs re-reads the sequence from committed state on
     // every sign, so a second tx from the same wallet in the same block window gets the SAME sequence
-    // and is rejected with "account sequence mismatch ... expected N+1, got N" — always short by
+    // and is rejected with "account sequence mismatch ... expected N+1, got N" - always short by
     // exactly one. Tracking the sequence here and passing it explicitly to sign() removes the race;
     // resyncSignerData() re-reads from chain whenever a tx errors, so we self-heal.
     #accountNumber = null
@@ -162,7 +162,7 @@ export class Wallet {
     //
     // The sequence is RESERVED synchronously here rather than incremented after the broadcast:
     // sendTx awaits between signing and broadcasting, so two concurrent txs for the same wallet
-    // would otherwise both read the same value before either advanced it — the same race, just
+    // would otherwise both read the same value before either advanced it - the same race, just
     // moved. Handing out N and immediately bumping to N+1 in one synchronous step makes each
     // caller's sequence unique. #seqInit serialises the initial chain read for the same reason.
     async signerData() {

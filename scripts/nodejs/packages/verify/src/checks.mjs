@@ -1,4 +1,4 @@
-import {composeContainers, endpoints} from "@simulator/shared";
+import {composeContainers, endpoints, loadCustomTxs} from "@simulator/shared";
 
 // Blocks the chain must reach past the upgrade height before the upgrade counts as healthy.
 const MIN_BLOCKS_AFTER_UPGRADE = 10
@@ -54,6 +54,7 @@ export const buildChecks = (overview) => {
     const {rpc: fundRpc, rest: fundRest} = rpc1(overview.fund_nodes)
     const {rest: gaiadRest} = rpc1(overview.gaiad_nodes)
     const numValidators = overview.fund_nodes.filter((n) => n.type === "validator").length
+    const custom = loadCustomTxs()
 
     const countMsgs = async (type, heightOp) => {
         const query = encodeURIComponent(`message.action='${type}' AND tx.height${heightOp}${upgradeHeight}`)
@@ -115,6 +116,37 @@ export const buildChecks = (overview) => {
                 return {pass: fund.length > 0 && gaiad.length > 0, detail: `FUND ${list(fund)} / Gaia ${list(gaiad)}`}
             },
         },
+        // each custom proposal from config.json, found by its metadata label, ended as configured
+        ...custom.gov.map((tx) => ({
+            name: `custom proposal "${tx.proposal.title}" (block ${tx.submit_height})`,
+            run: async () => {
+                const status = (s) => s.replace("PROPOSAL_STATUS_", "")
+                const want = tx.passes === "yes" ? "PROPOSAL_STATUS_PASSED" : "PROPOSAL_STATUS_REJECTED"
+                const {proposals} = await getJson(`${fundRest}/cosmos/gov/v1/proposals?pagination.limit=1000`)
+                const proposal = proposals.find((p) => p.metadata === tx.proposal.metadata)
+                if (!proposal) {
+                    return {pass: false, detail: "not on chain - was it submitted?"}
+                }
+                return {pass: proposal.status === want, detail: `proposal #${proposal.id} ${status(proposal.status)} (expected ${status(want)})`}
+            },
+        })),
+        // each custom msg tx from config.json, found by its memo among its signer's txs, ended as configured. One
+        // expected to fail may never reach a block (rejected on broadcast), so absence counts for those
+        ...custom.msgs.map((tx) => ({
+            name: `custom msg "${tx.tx.body.memo}" from ${tx.from} (block ${tx.submit_height})`,
+            run: async () => {
+                const wantSuccess = tx.succeeds === "yes"
+                const expected = wantSuccess ? "success" : "failure"
+                const query = encodeURIComponent(`tx.fee_payer='${tx.address}' AND tx.height>=${tx.submit_height}`)
+                const responses = (await getJson(`${fundRest}/cosmos/tx/v1beta1/txs?query=${query}&limit=1000`)).tx_responses ?? []
+                const found = responses.find((r) => r.tx.body.memo === tx.tx.body.memo)
+                if (!found) {
+                    return {pass: !wantSuccess, detail: `not on chain (expected ${expected})`}
+                }
+                const outcome = found.code === 0 ? "succeeded" : `failed: ${found.raw_log.slice(0, 80)}`
+                return {pass: (found.code === 0) === wantSuccess, detail: `block ${found.height}, ${outcome} (expected ${expected})`}
+            },
+        })),
         ...EXPECTED_MSGS.map(({type, beforeOnly}) => ({
             name: type,
             run: async () => {

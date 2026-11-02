@@ -119,30 +119,53 @@ export class Gov {
         switch(rndMsgType) {
             case Gov.MsgTypes.GOV_VOTE:
                 if(openProposal?.id > 0) {
-                    await Gov.voteOnProposal(wallet, openProposal.id, false)
+                    await Gov.voteOnProposal(wallet, openProposal.id, Gov.voteFor(openProposal))
                 }
                 break
         }
     }
 
-    static async submitUpgradeProposal(fromWallet, config) {
-
-        Logger.info("RUN", "submit upgrade proposal")
-
-        // make gen renders the proposal on the host; the CLI in the node container reads it from stdin
-        const proposal = fs.readFileSync(`${config.dirs.generated}/assets/tx_runner/upgrade_proposal.json`, "utf8")
-        await TxFactory.sendCliTx(config, fromWallet, ["tx", "gov", "submit-proposal", "/dev/stdin", "--gas-prices", "25.0nund"],
-            `${fromWallet.meta.wallet_json.account} submit upgrade proposal`, proposal)
+    // Submits a proposal file (its JSON text) through the und CLI, which reads it from stdin. Returns the tx hash, or
+    // null if nothing was broadcast.
+    static async submitProposal(config, fromWallet, proposal, what) {
+        Logger.info("RUN", `submit ${what}`)
+        return await TxFactory.sendCliTx(config, fromWallet, ["tx", "gov", "submit-proposal", "/dev/stdin", "--gas-prices", "25.0nund"],
+            `${fromWallet.meta.wallet_json.account} submit ${what}`, proposal)
     }
 
-    static async validatorSubmitOrVote(queryClient, validatorWallets) {
+    static async submitUpgradeProposal(fromWallet, config) {
+        // make gen renders the proposal on the host
+        const proposal = fs.readFileSync(`${config.dirs.generated}/assets/tx_runner/upgrade_proposal.json`, "utf8")
+        return await Gov.submitProposal(config, fromWallet, proposal, "upgrade proposal")
+    }
+
+    // The vote to cast on a proposal: yes on the upgrade (always proposal 1); on a custom proposal from config.json
+    // (recognised by its metadata label), the configured outcome; otherwise a random option.
+    static voteFor(proposal, customGov = []) {
+        const {VOTE_OPTION_YES, VOTE_OPTION_NO} = cosmos.gov.v1.VoteOption
+        if (parseInt(proposal.id, 10) === 1) {
+            return VOTE_OPTION_YES
+        }
+        const custom = customGov.find((tx) => tx.proposal.metadata === proposal.metadata)
+        if (custom) {
+            return custom.passes === "yes" ? VOTE_OPTION_YES : VOTE_OPTION_NO
+        }
+        // Inclusion of No with Veto votes can be enabled in .env. This will mean nund can be burned from the supply if
+        // sufficient wallets vote using the veto option
+        const vMax = (process.env.USE_NO_WITH_VETO === "true") ? 4 : 3
+        return Math.floor(Math.random() * (vMax) + 1)
+    }
+
+    // Validators vote on every open proposal - custom ones as configured - and submit a text proposal when none is open.
+    static async validatorSubmitOrVote(queryClient, validatorWallets, customGov) {
         const openProposals = await Gov.getOpenProposals(queryClient)
 
-        // vote or submit
         if(openProposals && openProposals?.proposals.length > 0) {
-            //vote
-            for(let i = 0; i < validatorWallets.length; i++) {
-                await Gov.voteOnProposal(validatorWallets[i], openProposals.proposals[0].id, false)
+            for (const proposal of openProposals.proposals) {
+                const option = Gov.voteFor(proposal, customGov)
+                for (const validator of validatorWallets) {
+                    await Gov.voteOnProposal(validator, proposal.id, option)
+                }
             }
         } else {
             const fromWallet = getRandomWallet(validatorWallets)
@@ -162,21 +185,8 @@ export class Gov {
         await TxFactory.sendTx(wallet, [msg], memo, null)
     }
 
-    static async voteOnProposal(wallet, proposalId, forceYes = false) {
+    static async voteOnProposal(wallet, proposalId, voteOption) {
         Logger.info("RUN", "governance vote on proposal")
-
-        let voteOption
-
-        // #1 is always the upgrade proposal and should be VOTE_OPTION_YES
-        if(forceYes || parseInt(proposalId, 0) === 1) {
-            voteOption = cosmos.gov.v1.VoteOption.VOTE_OPTION_YES
-        } else {
-            // Inclusion of No with Veto votes can be enabled in .env. This will mean
-            // nund can be burned from the supply if sufficient wallets vote using
-            // the veto option
-            const vMax = (process.env.USE_NO_WITH_VETO === "true") ? 4 : 3
-            voteOption = Math.floor(Math.random() * (vMax) + 1)
-        }
 
         const msgParams = {
             proposalId: proposalId,

@@ -1,7 +1,7 @@
 import {mainchain} from "@unification-com/fundjs";
 // fundjs2 = @unification-com/fundjs@0.2.1 (aliased). vaxildan makes x/stream multi-denom, so
 // claim/cancel/updateFlowRate gain a `denom` field that fundjs 0.1.0 cannot encode. Only the
-// composers for those three messages are taken from 0.2.1 — everything else stays on 0.1.0, whose
+// composers for those three messages are taken from 0.2.1 - everything else stays on 0.1.0, whose
 // registry/amino exports the rest of the runner still depends on.
 //
 // With denom = "" the 0.2.1 codecs encode byte-identically to 0.1.0 (proto3 omits empty strings),
@@ -195,7 +195,7 @@ export class PaymentStream {
             const sender = senderWallets[i]
             const receiver = receiverWallets[i]
             // Stream writes are sized by the record (WritePerByte), and simulate() runs against
-            // state that can shift before execution — 2.0 left updateFlowRate ~0.1% short and it
+            // state that can shift before execution - 2.0 left updateFlowRate ~0.1% short and it
             // died "out of gas". Headroom here removes that noise; genuinely invalid txs (cancelling
             // a stream that no longer exists, etc.) still fail on their own merits, which is what we
             // want to exercise.

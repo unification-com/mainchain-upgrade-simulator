@@ -1,14 +1,18 @@
 package generate
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/config"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/network"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/render"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/tomledit"
+	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/wallet"
 )
 
 // peers is a node's persistent peers and seeds: every other node of its chain, with seeds listed separately, in
@@ -108,6 +112,145 @@ func (g *generator) configureHermes() error {
 		"IBC_GAIAD_RPC":  fmt.Sprintf("%s:%d", ibc.IP, ibc.RPCPort),
 		"IBC_GAIAD_GRPC": fmt.Sprintf("%s:%d", ibc.IP, ibc.GRPCPort),
 	})
+}
+
+// customTxsFile is custom_txs.json: the transactions the tx runner sends at set heights. Each carries a label - a
+// gov proposal's metadata, a msg tx's memo - so the tx runner and verify can recognise it on chain.
+type customTxsFile struct {
+	Gov  []customGovTx `json:"gov"`
+	Msgs []customMsgTx `json:"msgs"`
+}
+
+// customGovTx is a proposal: when to submit it, how the validators vote on it, and the proposal file itself.
+type customGovTx struct {
+	SubmitHeight int64           `json:"submit_height"`
+	Passes       string          `json:"passes"`
+	Proposal     govProposalFile `json:"proposal"`
+}
+
+// govProposalFile is the proposal file `tx gov submit-proposal` reads.
+type govProposalFile struct {
+	Messages []json.RawMessage `json:"messages"`
+	Metadata string            `json:"metadata"`
+	Deposit  string            `json:"deposit"`
+	Title    string            `json:"title"`
+	Summary  string            `json:"summary"`
+}
+
+// customMsgTx is a transaction a generated wallet signs and broadcasts.
+type customMsgTx struct {
+	SubmitHeight int64      `json:"submit_height"`
+	Succeeds     string     `json:"succeeds"`
+	From         string     `json:"from"`
+	Address      string     `json:"address"`
+	Tx           unsignedTx `json:"tx"`
+}
+
+// unsignedTx is a transaction for `tx sign`, with only the fields every supported und version's decoder accepts (a
+// newer CLI's --generate-only output adds fields an older one rejects).
+type unsignedTx struct {
+	Body struct {
+		Messages []json.RawMessage `json:"messages"`
+		Memo     string            `json:"memo"`
+	} `json:"body"`
+	AuthInfo struct {
+		Fee struct {
+			Amount   []coin `json:"amount"`
+			GasLimit uint64 `json:"gas_limit,string"`
+		} `json:"fee"`
+	} `json:"auth_info"`
+	Signatures []string `json:"signatures"`
+}
+
+type coin struct {
+	Denom  string `json:"denom"`
+	Amount string `json:"amount"`
+}
+
+const defaultCustomTxGas = 500000
+
+// walletRef is a generated FUND wallet named in a custom tx's message: {{test2}} for its address,
+// {{validator1.valoper}} for its operator address.
+var walletRef = regexp.MustCompile(`\{\{([a-z_]+[0-9]+)(\.valoper)?\}\}`)
+
+func resolveWallets(messages []json.RawMessage, wallets map[string]wallet.Wallet) ([]json.RawMessage, error) {
+	out := []json.RawMessage{}
+	var missing []string
+	for _, m := range messages {
+		resolved := walletRef.ReplaceAllStringFunc(string(m), func(ref string) string {
+			parts := walletRef.FindStringSubmatch(ref)
+			w, ok := wallets[parts[1]]
+			if !ok {
+				missing = append(missing, parts[1])
+				return ref
+			}
+			if parts[2] != "" {
+				return w.ValidatorAddress
+			}
+			return w.AddressBech32
+		})
+		out = append(out, json.RawMessage(resolved))
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("no generated FUND wallet called %s", strings.Join(missing, ", "))
+	}
+	return out, nil
+}
+
+func customTxs(cfg *config.Config, wallets map[string]wallet.Wallet) (customTxsFile, error) {
+	file := customTxsFile{Gov: []customGovTx{}, Msgs: []customMsgTx{}}
+	for i, tx := range cfg.Apps.Und.Txs.Gov {
+		messages, err := resolveWallets(tx.ProposalMsgs, wallets)
+		if err != nil {
+			return file, fmt.Errorf("custom gov tx %d: %w", i+1, err)
+		}
+		file.Gov = append(file.Gov, customGovTx{SubmitHeight: tx.SubmitHeight, Passes: tx.Passes, Proposal: govProposalFile{
+			Messages: messages, Metadata: fmt.Sprintf("simulator custom tx %d", i+1), Deposit: tx.Deposit,
+			Title: tx.Title, Summary: tx.Description,
+		}})
+	}
+	for i, tx := range cfg.Apps.Und.Txs.Msgs {
+		from, ok := wallets[tx.From]
+		if !ok {
+			return file, fmt.Errorf("custom msg %d: no generated FUND wallet called %s", i+1, tx.From)
+		}
+		messages, err := resolveWallets(tx.Messages, wallets)
+		if err != nil {
+			return file, fmt.Errorf("custom msg %d: %w", i+1, err)
+		}
+		msg := customMsgTx{SubmitHeight: tx.SubmitHeight, Succeeds: tx.Succeeds, From: tx.From, Address: from.AddressBech32}
+		if msg.Succeeds == "" {
+			msg.Succeeds = "yes"
+		}
+		gas := tx.Gas
+		if gas == 0 {
+			gas = defaultCustomTxGas
+		}
+		fee := strings.TrimSuffix(tx.Fee, "nund")
+		if fee == "" {
+			fee = fmt.Sprint(gas * fundGasPrice)
+		}
+		msg.Tx.Body.Messages = messages
+		msg.Tx.Body.Memo = fmt.Sprintf("simulator custom msg %d", i+1)
+		msg.Tx.AuthInfo.Fee.Amount = []coin{{Denom: "nund", Amount: fee}}
+		msg.Tx.AuthInfo.Fee.GasLimit = gas
+		msg.Tx.Signatures = []string{}
+		file.Msgs = append(file.Msgs, msg)
+	}
+	return file, nil
+}
+
+// writeCustomTxs writes the transactions the tx runner sends at set heights (none is empty lists).
+func (g *generator) writeCustomTxs() error {
+	file, err := customTxs(g.cfg, g.fundWallets)
+	if err != nil {
+		return err
+	}
+	out, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(g.p.TxRunner, "custom_txs.json"), append(out, '\n'), 0o644)
 }
 
 // writeProposal renders the upgrade proposal the tx runner submits.

@@ -18,6 +18,11 @@ export class WalletSet {
         return this.#wallets[network]
     }
 
+    // a wallet by its account name, e.g. test1
+    byName(network, account) {
+        return this.#wallets[network].find((w) => w.meta.wallet_json.account === account)
+    }
+
     // the network's wallets of the given types, grouped by type in the order given
     byType(network, ...types) {
         return types.flatMap((type) => this.#wallets[network].filter((w) => w.meta.wallet_json.wallet_type === type))

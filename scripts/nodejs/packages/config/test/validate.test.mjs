@@ -67,3 +67,26 @@ test('a stake override beyond num_validators is a warning, not an error', () => 
     assert.deepEqual(errors, [])
     assert.deepEqual(warnings, ['/apps/und/staking/stake_overrides: override for validator 4 is ignored (num_validators is 3)'])
 })
+
+test('custom gov txs: passes must be yes or no, and messages need a type', () => {
+    const errors = errorsFor((c) => {
+        c.apps.und.txs.gov[0].passes = 'maybe'
+        delete c.apps.und.txs.gov[1].proposal_msgs[0]['@type']
+    })
+    assert.ok(errors.some((e) => e.startsWith('/apps/und/txs/gov/0/passes')), errors.join('\n'))
+    assert.ok(errors.some((e) => e.includes('/apps/und/txs/gov/1/proposal_msgs/0') && e.includes('"@type"')), errors.join('\n'))
+})
+
+test('custom gov txs are optional, and a text proposal has no messages', () => {
+    assert.deepEqual(errorsFor((c) => { delete c.apps.und.txs }), [])
+    assert.deepEqual(errorsFor((c) => { c.apps.und.txs.gov[0].proposal_msgs = [] }), [])
+})
+
+test('custom msgs: the signer must look like a generated wallet, and there must be a message', () => {
+    const errors = errorsFor((c) => {
+        c.apps.und.txs.msgs[0].from = 'Test 1'
+        c.apps.und.txs.msgs[1].messages = []
+    })
+    assert.ok(errors.some((e) => e.startsWith('/apps/und/txs/msgs/0/from')), errors.join('\n'))
+    assert.ok(errors.some((e) => e.startsWith('/apps/und/txs/msgs/1/messages')), errors.join('\n'))
+})

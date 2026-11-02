@@ -54,6 +54,103 @@ Additionally, the size of the network can be configured:
 
 Most other configuration values can be left as their defaults.
 
+### 1.1. Custom transactions
+
+On top of its random traffic, the `tx_runner` can send transactions you define, each at a set block height: for
+example to change module parameters around the upgrade, or to check that a particular message works on both versions.
+They go in the optional `apps.und.txs` object, in two lists:
+
+- `gov` - governance proposals, which pass or are rejected as you choose
+- `msgs` - any other transaction, signed by one of the generated FUND wallets
+
+`make verify` checks that each one ended as configured. `example.config.json` has examples of both.
+
+#### Adding a governance proposal
+
+Add an entry to `apps.und.txs.gov`:
+
+```json
+{
+  "title": "BEACON parameters",
+  "description": "raise the BEACON registration fee",
+  "passes": "yes",
+  "submit_height": 20,
+  "deposit": "10000000000nund",
+  "proposal_msgs": [
+    {
+      "@type": "/mainchain.beacon.v1.MsgUpdateParams",
+      "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+      "params": {
+        "fee_register": "1500000000000",
+        "fee_record": "1000000000",
+        "fee_purchase_storage": "1000000000",
+        "denom": "nund",
+        "default_storage_limit": "2000",
+        "max_storage_limit": "3000"
+      }
+    }
+  ]
+}
+```
+
+- `title`, `description` - the proposal's title and summary
+- `submit_height` - from this block, a random validator submits it
+- `passes` - `"yes"` or `"no"`: every validator votes that way, so the proposal passes or is rejected
+- `deposit` - the proposal's deposit
+- `proposal_msgs` - what the proposal executes if it passes, usually a module's `MsgUpdateParams` with the gov module
+  account above as `authority`. An empty list makes a text proposal
+
+Two things to watch:
+
+- A `MsgUpdateParams` replaces all of a module's parameters. Copy the current ones from a running network (e.g.
+  `curl -s localhost:1320/mainchain/beacon/v1/params`) and change only what you mean to. The simulator's genesis sets
+  some on purpose, and resetting them can break the rehearsal: staking `unbonding_time` `1800s` and `max_entries`
+  `100` (see 4.7), and the BEACON and WrkChain storage limits.
+- Voting lasts 90 s, about 18 blocks, so leave at least that long between `submit_height` and running `make verify`.
+
+#### Adding a transaction
+
+Add an entry to `apps.und.txs.msgs`:
+
+```json
+{
+  "from": "test3",
+  "submit_height": 53,
+  "messages": [
+    {
+      "@type": "/cosmos.staking.v1beta1.MsgDelegate",
+      "delegator_address": "{{test3}}",
+      "validator_address": "{{validator1.valoper}}",
+      "amount": { "denom": "nund", "amount": "1000000000" }
+    }
+  ]
+}
+```
+
+- `from` - the generated FUND wallet that signs it: `validator1`, `test3`, `beacon2`, `stream_sender1` and so on (the
+  files in `generated/assets/wallets/und/`)
+- `submit_height` - the block from which it is sent
+- `messages` - the transaction's messages in JSON. Any message type the running `und` knows works without changes to
+  the `tx_runner`, because the network's own binary signs and broadcasts it
+- `succeeds` - optional, `"yes"` (the default) or `"no"`: the outcome `make verify` expects. Use `"no"` to check that
+  something is rejected, for example a message the upgrade removes
+- `gas`, `fee` - optional. The defaults are 500000 gas and gas x the 25 nund minimum gas price; set `fee` for messages
+  with a fixed fee, such as BEACON and WrkChain ones
+
+To get the JSON for a message, ask the CLI on a running network to generate the transaction without sending it, then
+copy the entry from its `body.messages`:
+
+```bash
+docker exec t_dn_fund_rpc1 /root/.und_mainchain/cosmovisor/current/bin/und tx staking delegate \
+  <VALOPER_ADDRESS> 1000000000nund --from <ADDRESS> --generate-only --node tcp://localhost:26760
+```
+
+#### Naming wallets in messages
+
+Addresses change with every `make gen`, so messages in either list name generated wallets instead, and the generator
+fills in the addresses: `{{test2}}` becomes that wallet's address and `{{validator1.valoper}}` its validator operator
+address. A name that matches no generated wallet stops `make gen`.
+
 ## 2. Generate the network
 
 `make gen` first validates `config.json` against `schema/config.schema.json` and stops, before anything is generated,
@@ -227,6 +324,8 @@ Checks, all against the running network (the plan, height and nodes come from `g
 - every node and the Hermes container is running
 - every validator signed at least one of the last 10 blocks
 - an IBC transfer channel is open on both chains
+- each custom proposal in `apps.und.txs.gov` ended as configured - passed or rejected - and each tx in
+  `apps.und.txs.msgs` succeeded or failed as configured
 - at least one successful transaction per message type the `tx_runner` sends, plus Hermes's IBC packet relaying, both
   before the upgrade and from `upgrade_height` on (the upgrade block is the first one the new binary runs) - so both
   binaries are proven to handle every message. The upgrade proposal itself is only needed before

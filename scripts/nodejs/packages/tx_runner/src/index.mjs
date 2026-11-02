@@ -6,7 +6,7 @@ import {Configuration} from "./config/config.mjs";
 import {Logger} from './libs/logger.mjs'
 
 // The node goes away for ~15s at the upgrade height while cosmovisor swaps the binary. Any query
-// in flight at that moment rejects, and an unhandled rejection kills the whole runner mid-run —
+// in flight at that moment rejects, and an unhandled rejection kills the whole runner mid-run -
 // which is exactly when we most want it alive. Log and carry on instead: the next block tick
 // simply retries. This mirrors what a real integrator's client has to cope with during an upgrade.
 process.on('unhandledRejection', (reason) => {

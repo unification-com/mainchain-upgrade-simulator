@@ -67,6 +67,104 @@
           }
         ],
         "payment_streams": 5
+      },
+      "txs": {
+        "gov": [
+          {
+            "title": "BEACON parameters",
+            "description": "raise the BEACON registration fee",
+            "passes": "yes",
+            "submit_height": 20,
+            "deposit": "10000000000nund",
+            "proposal_msgs": [
+              {
+                "@type": "/mainchain.beacon.v1.MsgUpdateParams",
+                "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+                "params": {
+                  "fee_register": "1500000000000",
+                  "fee_record": "1000000000",
+                  "fee_purchase_storage": "1000000000",
+                  "denom": "nund",
+                  "default_storage_limit": "2000",
+                  "max_storage_limit": "3000"
+                }
+              }
+            ]
+          },
+          {
+            "title": "WrkChain parameters",
+            "description": "raise the WrkChain registration fee - rejected",
+            "passes": "no",
+            "submit_height": 22,
+            "deposit": "10000000000nund",
+            "proposal_msgs": [
+              {
+                "@type": "/mainchain.wrkchain.v1.MsgUpdateParams",
+                "authority": "und10d07y265gmmuvt4z0w9aw880jnsr700ja85vs4",
+                "params": {
+                  "fee_register": "1400000000000",
+                  "fee_record": "1000000000",
+                  "fee_purchase_storage": "1000000000",
+                  "denom": "nund",
+                  "default_storage_limit": "2000",
+                  "max_storage_limit": "3000"
+                }
+              }
+            ]
+          }
+        ],
+        "msgs": [
+          {
+            "from": "test1",
+            "submit_height": 30,
+            "messages": [
+              {
+                "@type": "/cosmos.bank.v1beta1.MsgSend",
+                "from_address": "{{test1}}",
+                "to_address": "{{test2}}",
+                "amount": [
+                  {
+                    "denom": "nund",
+                    "amount": "1000000000"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "from": "test3",
+            "submit_height": 53,
+            "messages": [
+              {
+                "@type": "/cosmos.staking.v1beta1.MsgDelegate",
+                "delegator_address": "{{test3}}",
+                "validator_address": "{{validator1.valoper}}",
+                "amount": {
+                  "denom": "nund",
+                  "amount": "1000000000"
+                }
+              }
+            ]
+          },
+          {
+            "from": "test2",
+            "submit_height": 54,
+            "succeeds": "no",
+            "messages": [
+              {
+                "@type": "/cosmos.bank.v1beta1.MsgSend",
+                "from_address": "{{test2}}",
+                "to_address": "{{test1}}",
+                "amount": [
+                  {
+                    "denom": "nund",
+                    "amount": "1000000000000000000000000"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     },
     "ibc": {

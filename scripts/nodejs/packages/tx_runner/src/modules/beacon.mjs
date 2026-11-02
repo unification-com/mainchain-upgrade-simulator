@@ -5,7 +5,7 @@ import {TxFactory} from "../tx/tx_factory.mjs";
 import {EFUND_ACTION_STEP} from "../wallet/wallet.mjs";
 import {mainchain} from "@unification-com/fundjs";
 // vaxildan (#129) adds an optional `metadata` field to BEACON timestamps, which fundjs 0.1.0 cannot
-// encode — so the composer for recordBeaconTimestamp comes from 0.2.1 (aliased as fundjs2). With
+// encode - so the composer for recordBeaconTimestamp comes from 0.2.1 (aliased as fundjs2). With
 // metadata = "" it encodes byte-identically to 0.1.0, so the same call is correct on both sides of
 // the upgrade; the runner sets a value once the chain has crossed the boundary.
 // TODO: drop the alias and move wholesale to fundjs >= 0.2.1 once vaxildan is live.
@@ -17,7 +17,7 @@ const { createHmac } = await import('node:crypto');
 export class Beacon {
 
     // Optional BEACON timestamp metadata (vaxildan #129, 256-byte cap on chain). Empty until the
-    // chain crosses the upgrade height — pre-vaxildan the field does not exist and the SDK rejects
+    // chain crosses the upgrade height - pre-vaxildan the field does not exist and the SDK rejects
     // unknown fields.
     static beaconMetadata = ""
 

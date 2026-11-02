@@ -102,6 +102,49 @@
                   }
                 }
               }
+            },
+            "txs": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "transactions the tx runner sends at set heights, on top of its random ones",
+              "properties": {
+                "gov": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["title", "description", "passes", "submit_height", "deposit", "proposal_msgs"],
+                    "properties": {
+                      "title": { "type": "string", "minLength": 1 },
+                      "description": { "type": "string", "minLength": 1, "description": "the proposal's summary" },
+                      "passes": { "type": "string", "enum": ["yes", "no"], "description": "how every validator votes on it, so it passes or is rejected" },
+                      "submit_height": { "type": "integer", "minimum": 1 },
+                      "deposit": { "type": "string", "pattern": "^[0-9]+nund$" },
+                      "proposal_msgs": {
+                        "type": "array",
+                        "description": "the proposal's messages, e.g. a module's MsgUpdateParams signed by the gov authority; none for a text proposal",
+                        "items": { "$ref": "#/definitions/message" }
+                      }
+                    }
+                  }
+                },
+                "msgs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["from", "submit_height", "messages"],
+                    "properties": {
+                      "from": { "type": "string", "pattern": "^[a-z_]+[0-9]+$", "description": "the generated FUND wallet that signs, e.g. test1" },
+                      "submit_height": { "type": "integer", "minimum": 1 },
+                      "succeeds": { "type": "string", "enum": ["yes", "no"], "description": "the outcome make verify expects (default yes)" },
+                      "gas": { "type": "integer", "minimum": 1, "description": "gas limit (default 500000)" },
+                      "fee": { "type": "string", "pattern": "^[0-9]+nund$", "description": "default: gas x the 25 nund minimum gas price" },
+                      "messages": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/message" } }
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -174,6 +217,12 @@
     "nund": { "type": "integer", "minimum": 0 },
     "integerString": { "type": "string", "pattern": "^[0-9]+$" },
     "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
-    "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "message": {
+      "type": "object",
+      "required": ["@type"],
+      "properties": { "@type": { "type": "string", "pattern": "^/" } },
+      "description": "a Cosmos message in JSON; string values may name generated FUND wallets as {{test2}} (address) or {{validator1.valoper}} (operator address)"
+    }
   }
 }
