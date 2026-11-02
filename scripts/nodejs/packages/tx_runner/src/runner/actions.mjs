@@ -1,4 +1,4 @@
-import {sleep} from "@simulator/shared";
+import {loadCustomTxs, sleep} from "@simulator/shared";
 import {Logger} from "../libs/logger.mjs";
 import {getRandomWallet, getRandomWalletNotThis} from "../libs/wallet_utils.mjs";
 import {TxFactory} from "../tx/tx_factory.mjs";
@@ -25,6 +25,8 @@ export class BlockActions {
     #proposalSubmitted = false
     #ibcOpen = false
     #ibcDenom = ""
+    #customTxs = loadCustomTxs()
+    #customDone = {gov: new Set(), msgs: new Set()} // indexes of the custom txs sent
 
     constructor(config, wallets, clients, upgradeHeight) {
         this.#config = config
@@ -49,6 +51,10 @@ export class BlockActions {
         await this.#checkIbcChannels()
 
         await sleep(1000)
+        // custom txs before any wallet acts this block: a CLI tx is signed with the account's committed sequence, which
+        // a tx still in the mempool would make stale
+        await this.#customGovTxs()
+        await this.#customMsgTxs()
         await this.#validatorActions()
 
         if (this.#height > 4) {
@@ -96,7 +102,36 @@ export class BlockActions {
             await Gov.submitUpgradeProposal(getRandomWallet(validators), this.#config.config)
             this.#proposalSubmitted = true
         } else {
-            await Gov.validatorSubmitOrVote(this.#clients.pick("fund", "cosmos"), validators)
+            await Gov.validatorSubmitOrVote(this.#clients.pick("fund", "cosmos"), validators, this.#customTxs.gov)
+        }
+    }
+
+    // config.json's custom txs of one kind that are due: not yet sent, and their height reached
+    #dueCustomTxs(kind) {
+        return [...this.#customTxs[kind].entries()]
+            .filter(([i, tx]) => !this.#customDone[kind].has(i) && this.#height >= tx.submit_height)
+    }
+
+    // config.json's gov proposals, each submitted by a random validator; one that fails to broadcast is tried again
+    // next block
+    async #customGovTxs() {
+        for (const [i, tx] of this.#dueCustomTxs("gov")) {
+            const validator = getRandomWallet(this.#wallets.byType("fund", "validator"))
+            if (await Gov.submitProposal(this.#config.config, validator, JSON.stringify(tx.proposal), `custom proposal "${tx.proposal.title}"`)) {
+                this.#customDone.gov.add(i)
+            }
+        }
+    }
+
+    // config.json's msg txs, each signed by its wallet. Tried again next block only if it never reached the chain - the
+    // script failed, or a stale sequence was rejected (code 32); any other rejection is final, for make verify to judge.
+    async #customMsgTxs() {
+        for (const [i, tx] of this.#dueCustomTxs("msgs")) {
+            const res = await TxFactory.sendUnsignedTx(this.#config.config, this.#wallets.byName("fund", tx.from),
+                JSON.stringify(tx.tx), `${tx.from} ${tx.tx.body.memo}`)
+            if (res !== null && res.code !== 32) {
+                this.#customDone.msgs.add(i)
+            }
         }
     }
 

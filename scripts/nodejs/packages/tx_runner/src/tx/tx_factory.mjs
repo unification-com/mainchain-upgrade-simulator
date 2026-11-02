@@ -25,7 +25,7 @@ export class TxFactory {
             }
 
             // Sign with the locally tracked sequence rather than letting cosmjs re-read it from
-            // committed state — see Wallet's signer-data comment for why that races.
+            // committed state - see Wallet's signer-data comment for why that races.
             const signerData = await wallet.signerData()
             usedSequence = signerData.sequence
             const txRaw = await wallet.signingClient.sign(signer, msgs, actualFee, memo, signerData)
@@ -61,38 +61,60 @@ export class TxFactory {
 
     }
 
-    // Sends a tx through the und CLI instead of the signing client, so the CLI's own code paths (proposal files,
-    // client-side fee calculation) are exercised on the version under test - run inside the first FUND RPC node's
-    // container, so no host binary is needed. The wallet's key is recovered from its mnemonic into a throwaway keyring
-    // that lasts for the one call. `input` is fed to the tx command's stdin (e.g. a proposal file passed as
-    // /dev/stdin). Like sendTx, returns the tx hash, or null if nothing was broadcast.
-    static async sendCliTx(config, wallet, txArgs, memo, input = "") {
+    // Runs und commands in the first FUND RPC node's container - its cosmovisor/current is the version under test, and
+    // no host binary is needed - signing as the wallet, whose key is recovered from its mnemonic into a throwaway
+    // keyring that lasts for the one call. `commands(flags)` gives the script's command lines; flags points them at the
+    // keyring and node. `args` are the script's "$@" and `input` its stdin. Logs the outcome and tracks an accepted tx
+    // like any other. Returns the tx response, or null if the script failed before broadcasting.
+    static async #inNode(config, wallet, commands, args, input, memo) {
         const rpc = config.networks.fund.rpcs[0]
+        const flags = `--keyring-backend test --home "$home" --node tcp://localhost:${rpc.rpc_port} --chain-id ${config.networks.fund.chain_id}`
         const script = [
             'set -e',
             'home=$(mktemp -d)',
             'trap \'rm -rf "$home"\' EXIT',
             `echo "$MNEMONIC" | ${NODE_UND} keys add signer --recover --keyring-backend test --home "$home" > /dev/null 2>&1`,
-            `${NODE_UND} "$@" --from signer --keyring-backend test --home "$home" --node tcp://localhost:${rpc.rpc_port} ` +
-                `--chain-id ${config.networks.fund.chain_id} --gas auto --gas-adjustment 1.5 --output json --yes`,
+            ...commands(flags),
         ].join("\n")
 
+        let res
         try {
             const {stdout} = await execa("docker",
-                ["exec", "-i", "-e", `MNEMONIC=${wallet.meta.wallet_json.mnemonic}`, rpc.container, "sh", "-c", script, "sh", ...txArgs],
+                ["exec", "-i", "-e", `MNEMONIC=${wallet.meta.wallet_json.mnemonic}`, rpc.container, "sh", "-c", script, "sh", ...args],
                 {input})
-            const res = JSON.parse(stdout)
-            if (res.code !== 0) {
-                Logger.error("SEND_TX_CLI", "net=fund", `"${memo}" rejected:`, res.raw_log)
-                return null
-            }
-            Logger.info("SEND_TX_CLI", "net=fund", `rpc=${rpc.name}`, `txHash=${TxFactory.trimTxHash(res.txhash)}`, `"${memo}"`)
-            wallet.addSentTx(res.txhash)
-            return res.txhash
+            res = JSON.parse(stdout)
         } catch (e) {
             Logger.error("SEND_TX_CLI", "net=fund", `"${memo}"`, e.stderr || e.toString())
             return null
         }
+        if (res.code !== 0) {
+            Logger.error("SEND_TX_CLI", "net=fund", `"${memo}" rejected:`, res.raw_log)
+        } else {
+            Logger.info("SEND_TX_CLI", "net=fund", `rpc=${rpc.name}`, `txHash=${TxFactory.trimTxHash(res.txhash)}`, `"${memo}"`)
+            wallet.addSentTx(res.txhash)
+        }
+        return res
+    }
+
+    // Sends a tx through the und CLI instead of the signing client, so the CLI's own code paths (proposal files,
+    // client-side fee calculation) are exercised on the version under test. `input` is fed to the tx command's stdin
+    // (e.g. a proposal file passed as /dev/stdin). Like sendTx, returns the tx hash, or null if nothing was broadcast.
+    static async sendCliTx(config, wallet, txArgs, memo, input = "") {
+        const res = await TxFactory.#inNode(config, wallet,
+            (flags) => [`${NODE_UND} "$@" --from signer ${flags} --gas auto --gas-adjustment 1.5 --output json --yes`],
+            txArgs, input, memo)
+        return res?.code === 0 ? res.txhash : null
+    }
+
+    // Signs an unsigned tx (its JSON text) as the wallet and broadcasts it - any message the running binary knows,
+    // with no per-type code here. Returns the broadcast response (code 0 = accepted into the mempool), or null if it
+    // was not broadcast.
+    static async sendUnsignedTx(config, wallet, unsignedTx, memo) {
+        return await TxFactory.#inNode(config, wallet, (flags) => [
+            'cat > "$home/unsigned.json"',
+            `${NODE_UND} tx sign "$home/unsigned.json" --from signer ${flags} --output-document "$home/signed.json"`,
+            `${NODE_UND} tx broadcast "$home/signed.json" ${flags} --output json`,
+        ], [], unsignedTx, memo)
     }
 
     static moveSentToPending(wallet) {

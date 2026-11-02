@@ -31,6 +31,7 @@ type Und struct {
 	Nodes       Nodes    `json:"nodes"`
 	Staking     Staking  `json:"staking"`
 	Accounts    Accounts `json:"accounts"`
+	Txs         Txs      `json:"txs"`
 }
 
 type Genesis struct {
@@ -83,6 +84,32 @@ type Accounts struct {
 	StoragePurchase int             `json:"storage_purchase"`
 	PaymentStreams  int             `json:"payment_streams"`
 	Static          []StaticAccount `json:"static"`
+}
+
+// Txs are transactions the tx runner sends at set heights, on top of its random ones.
+type Txs struct {
+	Gov  []GovTx `json:"gov"`
+	Msgs []MsgTx `json:"msgs"`
+}
+
+// MsgTx is a transaction signed by the generated FUND wallet From and sent at SubmitHeight.
+type MsgTx struct {
+	From         string            `json:"from"`
+	SubmitHeight int64             `json:"submit_height"`
+	Succeeds     string            `json:"succeeds"` // "yes" (the default) or "no": the outcome make verify expects
+	Gas          uint64            `json:"gas"`      // 0 for the default
+	Fee          string            `json:"fee"`      // empty for gas x the minimum gas price
+	Messages     []json.RawMessage `json:"messages"`
+}
+
+// GovTx is a governance proposal submitted at SubmitHeight, on which every validator votes Passes ("yes" or "no").
+type GovTx struct {
+	Title        string            `json:"title"`
+	Description  string            `json:"description"`
+	Passes       string            `json:"passes"`
+	SubmitHeight int64             `json:"submit_height"`
+	Deposit      string            `json:"deposit"`
+	ProposalMsgs []json.RawMessage `json:"proposal_msgs"` // passed to the chain as written
 }
 
 type StaticAccount struct {

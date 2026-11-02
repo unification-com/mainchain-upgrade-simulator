@@ -16,8 +16,8 @@ func TestExampleConfigLoads(t *testing.T) {
 	if cfg.Apps.Und.Upgrade.PlanName == "" || cfg.Apps.Und.Nodes.NumValidators < 1 || cfg.Docker.Network.Subnet == "" {
 		t.Fatalf("example.config.json decoded with empty fields: %+v", cfg)
 	}
-	if len(cfg.Apps.Und.Staking.StakeOverrides) == 0 {
-		t.Fatal("example.config.json is expected to carry stake overrides")
+	if len(cfg.Apps.Und.Staking.StakeOverrides) == 0 || len(cfg.Apps.Und.Txs.Gov) == 0 {
+		t.Fatal("example.config.json is expected to carry stake overrides and custom gov txs")
 	}
 }
 
