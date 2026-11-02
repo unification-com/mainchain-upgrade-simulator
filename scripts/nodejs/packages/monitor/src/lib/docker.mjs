@@ -97,17 +97,6 @@ export const getCurrentSoftwareVersion = (logs) => {
     return currentVersion
 }
 
-export const getHermesStarted = (logs) => {
-    const lineMatch = "Hermes has started"
-    const lines = reverseAndStripLogs(logs)
-    for (const line of lines) {
-        if (line.includes(lineMatch)) {
-            return true
-        }
-    }
-    return false
-}
-
 export const getHermesCreateStatus = (logs) => {
     const lines = reverseAndStripLogs(logs)
     for (const line of lines) {
