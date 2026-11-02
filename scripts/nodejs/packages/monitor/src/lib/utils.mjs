@@ -1,30 +1,9 @@
-export const getNetworkInfo = (netOverview) => {
+import {endpoints} from "@simulator/shared";
 
+// The monitor's view of the network: a table row per FUND node, and each chain's first RPC node to query.
+export const getNetworkInfo = (netOverview) => {
     const containers = {}
-    const queryNodes = {
-        fund: {
-            rpc: "",
-            ws: "",
-            grpc: "",
-            rest: "",
-            rpc_port: "",
-            grpc_port: "",
-            rest_port: "",
-            container: "",
-        },
-        gaiad: {
-            rpc: "",
-            ws: "",
-            grpc: "",
-            rest: "",
-            rpc_port: "",
-            grpc_port: "",
-            rest_port: "",
-            container: "",
-        }
-    }
-    for(let i = 0; i < netOverview.fund_nodes.length; i++){
-        const node = netOverview.fund_nodes[i]
+    for (const node of netOverview.fund_nodes) {
         containers[node.name] = {
             container: node.docker_container,
             height: 0,
@@ -32,32 +11,12 @@ export const getNetworkInfo = (netOverview) => {
             up_time: 0,
             und_version: null,
         }
-
-        if(node.name === "rpc1") {
-            queryNodes.fund.container = node.docker_container
-            queryNodes.fund.rpc = `http://localhost:${node.rpc_port}`
-            queryNodes.fund.ws = `ws://localhost:${node.rpc_port}/websocket`
-            queryNodes.fund.grpc = `http://localhost:${node.grpc_port}`
-            queryNodes.fund.rest = `http://localhost:${node.rest_port}`
-            queryNodes.fund.rpc_port = node.rpc_port
-            queryNodes.fund.grpc_port = node.grpc_port
-            queryNodes.fund.rest_port = node.rest_port
-        }
     }
 
-    for(let i = 0; i < netOverview.gaiad_nodes.length; i++) {
-        const node = netOverview.gaiad_nodes[i]
-        if(node.name === "rpc1") {
-            queryNodes.gaiad.container = node.docker_container
-            queryNodes.gaiad.rpc = `http://localhost:${node.rpc_port}`
-            queryNodes.gaiad.ws = `ws://localhost:${node.rpc_port}/websocket`
-            queryNodes.gaiad.grpc = `http://localhost:${node.grpc_port}`
-            queryNodes.gaiad.rest = `http://localhost:${node.rest_port}`
-            queryNodes.gaiad.rpc_port = node.rpc_port
-            queryNodes.gaiad.grpc_port = node.grpc_port
-            queryNodes.gaiad.rest_port = node.rest_port
-        }
+    const rpc1 = (nodes) => {
+        const node = nodes.find((n) => n.name === "rpc1")
+        return {...endpoints(node), rpc_port: node.rpc_port, container: node.docker_container}
     }
 
-    return [containers, queryNodes]
+    return [containers, {fund: rpc1(netOverview.fund_nodes), gaiad: rpc1(netOverview.gaiad_nodes)}]
 }

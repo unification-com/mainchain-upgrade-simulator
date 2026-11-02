@@ -1,14 +1,11 @@
 package generate
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/compose"
 	"github.com/unification-com/mainchain-upgrade-simulator/generator/internal/network"
@@ -129,12 +126,6 @@ func (g *generator) writeCompose() error {
 
 func (g *generator) hermesContainer() string { return g.cfg.Docker.ContainerPrefix + "ibc_hermes" }
 
-// ibcDenom is nund as it appears on the Gaia chain after crossing channel-0, the first channel Hermes opens.
-func ibcDenom() string {
-	sum := sha256.Sum256([]byte("transfer/channel-0/nund"))
-	return "ibc/" + strings.ToUpper(hex.EncodeToString(sum[:]))
-}
-
 type overviewNode struct {
 	Name            string `json:"name"`
 	Type            string `json:"type"`
@@ -176,7 +167,6 @@ func (g *generator) writeOverview() error {
 		WalletsDir           string         `json:"wallets_dir"`
 		FundContainerPrefix  string         `json:"fund_container_prefix"`
 		GaiadContainerPrefix string         `json:"gaiad_container_prefix"`
-		IBCDenom             string         `json:"ibc_denom"`
 		Hermes               overviewHermes `json:"hermes"`
 		FundNodes            []overviewNode `json:"fund_nodes"`
 		GaiadNodes           []overviewNode `json:"gaiad_nodes"`
@@ -186,7 +176,6 @@ func (g *generator) writeOverview() error {
 		FundUpgradeHeight: und.Upgrade.UpgradeHeight, FundUpgradePlan: und.Upgrade.PlanName,
 		WalletsDir:          filepath.Dir(g.p.WalletsUnd),
 		FundContainerPrefix: g.fund.containerPrefix, GaiadContainerPrefix: g.ibc.containerPrefix,
-		IBCDenom: ibcDenom(),
 		Hermes: overviewHermes{Name: "hermes1", Type: "hermes", IP: g.hermesIP, PrometheusPort: hermesPrometheusPort,
 			RESTPort: hermesRESTPort, DockerContainer: g.hermesContainer()},
 		FundNodes:  nodes(g.fund),

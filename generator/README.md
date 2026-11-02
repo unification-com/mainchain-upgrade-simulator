@@ -40,6 +40,7 @@ Intended differences from the bash output:
 - wallet files have no `key_files` (nothing reads them since the tx runner signs CLI transactions in a node container)
 - node descriptors have no `val_pubkey_escaped` (it only fed the bash gentx command)
 - no `network/docker/` counter files, `stake_*.json` or `network/hermes.json` (bash-internal state, kept in memory)
+- `overview.json` has no `ibc_denom` - the monitor, its only reader, derives the denom from the live IBC channel
 - compose `command` is in exec form (`["/bin/bash", "-c", "cd /root && ./run_node.sh"]`) - the same commands as the
   bash generator's folded multi-line string
 
