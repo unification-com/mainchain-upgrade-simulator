@@ -1,5 +1,5 @@
 import path from "path"
-import {generatedDir as sharedGeneratedDir, loadOverview} from "@simulator/shared";
+import {endpoints, generatedDir as sharedGeneratedDir, loadOverview} from "@simulator/shared";
 
 export class Configuration {
     #config = {}
@@ -13,6 +13,16 @@ export class Configuration {
         const fundWalletsDir = path.resolve(walletsDir, "und")
         const gaiadWalletsDir = path.resolve(walletsDir, "gaiad")
 
+        // a chain's RPC nodes, which the runner spreads its queries and txs across
+        const rpcNodes = (nodes) => nodes.filter((node) => node.type === "rpc").map((node) => ({
+            name: node.name,
+            ...endpoints(node),
+            rpc_port: node.rpc_port,
+            grpc_port: node.grpc_port,
+            rest_port: node.rest_port,
+            container: node.docker_container,
+        }))
+
         const fund = {
             chain: {
                 bech32_prefix: "und",
@@ -20,7 +30,7 @@ export class Configuration {
             },
             name: "fund",
             chain_id: netOverview.fund_chain_id,
-            rpcs: [],
+            rpcs: rpcNodes(netOverview.fund_nodes),
         }
         const gaiad = {
             chain: {
@@ -29,40 +39,7 @@ export class Configuration {
             },
             name: "gaiad",
             chain_id: netOverview.gaiad_chain_id,
-            rpcs: [],
-        }
-
-        for(let i = 0; i < netOverview.fund_nodes.length; i++){
-            const node = netOverview.fund_nodes[i]
-            if(node.type === "rpc") {
-                fund.rpcs.push({
-                    name: node.name,
-                    rpc: `http://localhost:${node.rpc_port}`,
-                    ws: `ws://localhost:${node.rpc_port}/websocket`,
-                    grpc: `http://localhost:${node.grpc_port}`,
-                    rest: `http://localhost:${node.rest_port}`,
-                    rpc_port: node.rpc_port,
-                    grpc_port: node.grpc_port,
-                    rest_port: node.rest_port,
-                    container: node.docker_container,
-                })
-            }
-        }
-
-        for(let i = 0; i < netOverview.gaiad_nodes.length; i++){
-            const node = netOverview.gaiad_nodes[i]
-            if(node.type === "rpc") {
-                gaiad.rpcs.push({
-                    name: node.name,
-                    rpc: `http://localhost:${node.rpc_port}`,
-                    ws: `ws://localhost:${node.rpc_port}/websocket`,
-                    grpc: `http://localhost:${node.grpc_port}`,
-                    rest: `http://localhost:${node.rest_port}`,
-                    rpc_port: node.rpc_port,
-                    grpc_port: node.grpc_port,
-                    rest_port: node.rest_port,
-                })
-            }
+            rpcs: rpcNodes(netOverview.gaiad_nodes),
         }
 
         this.#config = {

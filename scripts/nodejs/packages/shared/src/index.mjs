@@ -45,3 +45,11 @@ export const composeContainers = async () => {
     const {stdout} = await execa`docker compose ps --format json`
     return stdout ? stdout.split('\n').map((line) => JSON.parse(line)) : []
 }
+
+// The URLs a node publishes on the host, from its overview.json entry (RPC nodes publish RPC, REST and gRPC).
+export const endpoints = (node) => ({
+    rpc: `http://localhost:${node.rpc_port}`,
+    ws: `ws://localhost:${node.rpc_port}/websocket`,
+    grpc: `http://localhost:${node.grpc_port}`,
+    rest: `http://localhost:${node.rest_port}`,
+})

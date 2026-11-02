@@ -1,4 +1,4 @@
-import {composeContainers} from "@simulator/shared";
+import {composeContainers, endpoints} from "@simulator/shared";
 
 // Blocks the chain must reach past the upgrade height before the upgrade counts as healthy.
 const MIN_BLOCKS_AFTER_UPGRADE = 10
@@ -50,10 +50,9 @@ export const buildChecks = (overview) => {
 
     const upgradeHeight = Number(overview.fund_upgrade_height)
     const plan = overview.fund_upgrade_plan
-    const rpc1 = (nodes) => nodes.find((n) => n.name === "rpc1")
-    const fundRpc = `http://localhost:${rpc1(overview.fund_nodes).rpc_port}`
-    const fundRest = `http://localhost:${rpc1(overview.fund_nodes).rest_port}`
-    const gaiadRest = `http://localhost:${rpc1(overview.gaiad_nodes).rest_port}`
+    const rpc1 = (nodes) => endpoints(nodes.find((n) => n.name === "rpc1"))
+    const {rpc: fundRpc, rest: fundRest} = rpc1(overview.fund_nodes)
+    const {rest: gaiadRest} = rpc1(overview.gaiad_nodes)
     const numValidators = overview.fund_nodes.filter((n) => n.type === "validator").length
 
     const countMsgs = async (type, heightOp) => {
